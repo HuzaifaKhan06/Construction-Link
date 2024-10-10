@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D and 3D House Modeling</title>
+    
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; }
+        #2d-canvas { width: 100%; height: 50vh; border: 1px solid black; }
+        #threejs-canvas { width: 100%; height: 50vh; }
+        input { margin: 5px; }
+    </style>
+</head>
+<body>
+    <canvas id="2d-canvas"></canvas>
+    <div id="threejs-canvas"></div>
+    <input type="number" id="wallHeight" placeholder="Height" />
+    <input type="number" id="wallWidth" placeholder="Width" />
+    <button id="addRoof">Add Roof</button>
+</html>
