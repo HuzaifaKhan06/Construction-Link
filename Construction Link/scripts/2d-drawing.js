@@ -6,10 +6,6 @@ canvas.height = window.innerHeight / 2; // Half height for stacking
 
 let walls = [];
 let drawing = false; // To track if the user is drawing
-let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 }; // To store the current line being drawn
-let selectedWall = null; // Track the currently selected wall
-let isDragging = false; // To track if a wall is being dragged
-let wallTexture = './assets/brick_texture.jpg'; // Default texture
 
 // Draw grid background
 function drawGrid() {
@@ -30,3 +26,46 @@ function drawGrid() {
 }
 
 drawGrid();
+
+canvas.addEventListener('mousedown', (event) => {
+    drawing = true; // Start drawing
+    const x = event.clientX;
+    const y = event.clientY;
+    walls.push({ x, y });
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (!drawing) return; // Exit if not drawing
+    const x = event.clientX;
+    const y = event.clientY;
+    const lastWall = walls[walls.length - 1];
+    drawLine(lastWall.x, lastWall.y, x, y); // Draw line to current mouse position
+});
+
+// Draw line when mouse is released
+canvas.addEventListener('mouseup', (event) => {
+    drawing = false;
+    const x = event.clientX;
+    const y = event.clientY;
+    walls.push({ x, y });
+    if (walls.length > 1) {
+        const [start, end] = [walls[walls.length - 2], walls[walls.length - 1]];
+        // Trigger the 3D wall creation, passing canvas width and height
+        add3DWall(start.x, start.y, end.x, end.y, canvas.width, canvas.height);
+    }
+});
+
+function drawLine(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+// Expose add3DWall function to be accessible from 3d-rendering.js
+export function add3DWall(x1, y1, x2, y2, canvasWidth, canvasHeight) {
+    const event = new CustomEvent('add-wall', { detail: { x1, y1, x2, y2, canvasWidth, canvasHeight } });
+    window.dispatchEvent(event);
+}
