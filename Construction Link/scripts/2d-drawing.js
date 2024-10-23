@@ -6,6 +6,7 @@ canvas.height = window.innerHeight / 2; // Half height for stacking
 
 let walls = [];
 let drawing = false; // To track if the user is drawing
+let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 }; // To store the current line being drawn
 
 // Draw grid background
 function drawGrid() {
@@ -31,30 +32,53 @@ canvas.addEventListener('mousedown', (event) => {
     drawing = true; // Start drawing
     const x = event.clientX;
     const y = event.clientY;
-    walls.push({ x, y });
+    currentLine.x1 = x;
+    currentLine.y1 = y;
 });
 
 canvas.addEventListener('mousemove', (event) => {
     if (!drawing) return; // Exit if not drawing
     const x = event.clientX;
     const y = event.clientY;
-    const lastWall = walls[walls.length - 1];
-    drawLine(lastWall.x, lastWall.y, x, y); // Draw line to current mouse position
+    currentLine.x2 = x;
+    currentLine.y2 = y;
+
+    // Clear the canvas and redraw everything
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+    walls.forEach((wall) => {
+        drawLine(wall.x1, wall.y1, wall.x2, wall.y2);
+        drawLength(wall.x1, wall.y1, wall.x2, wall.y2); // Draw lengths of already drawn walls
+    });
+
+    // Draw the current line
+    drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2);
+
+    // Calculate and display the length dynamically while drawing
+    const currentLength = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1).toFixed(2);
+    drawDynamicLength(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, currentLength); // Show length dynamically
 });
 
-// Draw line when mouse is released
+// Draw a line when mouse is released
 canvas.addEventListener('mouseup', (event) => {
     drawing = false;
     const x = event.clientX;
     const y = event.clientY;
-    walls.push({ x, y });
-    if (walls.length > 1) {
-        const [start, end] = [walls[walls.length - 2], walls[walls.length - 1]];
-        // Trigger the 3D wall creation, passing canvas width and height
-        add3DWall(start.x, start.y, end.x, end.y, canvas.width, canvas.height);
-    }
+
+    // Save the completed wall to the walls array
+    currentLine.x2 = x; // Finalize the end point of the wall
+    currentLine.y2 = y;
+    const length = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1).toFixed(2); // Calculate length
+    walls.push({ x1: currentLine.x1, y1: currentLine.y1, x2: currentLine.x2, y2: currentLine.y2, length }); // Store length with wall data
+
+    // Trigger the 3D wall creation, passing canvas width and height
+    add3DWall(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, canvas.width, canvas.height);
+
+    // Reset current line
+    currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
 });
 
+// Draw a line between two points
 function drawLine(x1, y1, x2, y2) {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -62,6 +86,21 @@ function drawLine(x1, y1, x2, y2) {
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
     ctx.stroke();
+}
+
+// Draw the length of each wall on the canvas
+function drawLength(x1, y1, x2, y2) {
+    const length = Math.hypot(x2 - x1, y2 - y1).toFixed(2); // Calculate the length
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'red';
+    ctx.fillText(`${length} m`, (x1 + x2) / 2, (y1 + y2) / 2 - 10); // Position the text above the line
+}
+
+// Draw the current dynamic length while dragging
+function drawDynamicLength(x1, y1, x2, y2, length) {
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'blue'; // Different color for dynamic length
+    ctx.fillText(`${length} m`, (x1 + x2) / 2, (y1 + y2) / 2 - 10); // Position the text above the line
 }
 
 // Expose add3DWall function to be accessible from 3d-rendering.js
