@@ -22,7 +22,7 @@ controls.enableZoom = true;
 // Global array to store walls
 const walls = [];
 
-// Function to create 3D walls
+// Function to create 3D walls with dynamic orientation for polygons
 function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight) {
     const length = Math.hypot(x2 - x1, y2 - y1);
     const height = parseFloat(document.getElementById('wallHeight').value) || 10;
@@ -35,11 +35,11 @@ function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight) {
     const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
 
+    // Adjust the wall's position and orientation
     wall.position.set((x1 + x2) / 2 - canvasWidth / 4, height / 2, (y1 + y2) / 2 - canvasHeight / 2);
-    wall.rotation.y = Math.atan2(y2 - y1, x2 - x1);
+    wall.rotation.y = Math.atan2(y2 - y1, x2 - x1); // Aligns the wall correctly with the 2D drawn wall
 
     scene.add(wall);
-
     walls.push({ x1, y1, x2, y2 });
 }
 
@@ -54,6 +54,7 @@ const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(10, 10, 10).normalize();
 scene.add(light);
 
+// Function to dynamically handle roof creation for polygons (optional)
 function createRoof(canvasWidth, canvasHeight) {
     if (walls.length < 2) {
         console.warn('Not enough walls to create a roof');
@@ -70,30 +71,17 @@ function createRoof(canvasWidth, canvasHeight) {
     const depth = maxY - minY + 2; // Extend roof depth slightly beyond walls
     const wallHeight = parseFloat(document.getElementById('wallHeight').value) || 10;
 
-    // Load the roof texture
     const textureLoader = new THREE.TextureLoader();
     const roofTexture = textureLoader.load('./assets/roof_texture.jpg'); // Replace with your texture path
 
-    // Create roof geometry as a box for flat roof
     const roofGeometry = new THREE.BoxGeometry(width, 0.2, depth); // Flat roof
-    const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide }); // Use texture
+    const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
     const roof = new THREE.Mesh(roofGeometry, roofMaterial);
 
-    // Position the roof above the walls, slightly higher than the wall height
     roof.position.set(minX + width / 2 - canvasWidth / 4, wallHeight + 0.1, minY + depth / 2 - canvasHeight / 2);
 
-    // Optionally, you can add a peak to the roof
-    const peakHeight = 1; // Height of the peak
-    const roofPeakGeometry = new THREE.ConeGeometry(width / 2, peakHeight, 4);
-    const roofPeakMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide }); // Use the same texture
-    const roofPeak = new THREE.Mesh(roofPeakGeometry, roofPeakMaterial);
-    roofPeak.position.set(roof.position.x, wallHeight + peakHeight, roof.position.z);
-    roofPeak.rotation.y = Math.PI / 4;
-
     scene.add(roof);
-    scene.add(roofPeak); // Add peak to the roof if desired
 }
-
 
 // Listen for the roof button click
 document.getElementById('addRoof').addEventListener('click', () => {

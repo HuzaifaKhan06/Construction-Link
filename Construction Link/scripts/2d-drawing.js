@@ -8,6 +8,15 @@ let walls = [];
 let drawing = false; // To track if the user is drawing
 let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 }; // To store the current line being drawn
 
+// Adjust for canvas position in the viewport
+function getMousePos(event) {
+    const rect = canvas.getBoundingClientRect(); // Get canvas position and size
+    return {
+        x: event.clientX - rect.left, // Adjust X to canvas coordinate
+        y: event.clientY - rect.top   // Adjust Y to canvas coordinate
+    };
+}
+
 // Draw grid background
 function drawGrid() {
     ctx.strokeStyle = '#ddd';
@@ -30,16 +39,14 @@ drawGrid();
 
 canvas.addEventListener('mousedown', (event) => {
     drawing = true; // Start drawing
-    const x = event.clientX;
-    const y = event.clientY;
+    const { x, y } = getMousePos(event);
     currentLine.x1 = x;
     currentLine.y1 = y;
 });
 
 canvas.addEventListener('mousemove', (event) => {
     if (!drawing) return; // Exit if not drawing
-    const x = event.clientX;
-    const y = event.clientY;
+    const { x, y } = getMousePos(event);
     currentLine.x2 = x;
     currentLine.y2 = y;
 
@@ -62,8 +69,7 @@ canvas.addEventListener('mousemove', (event) => {
 // Draw a line when mouse is released
 canvas.addEventListener('mouseup', (event) => {
     drawing = false;
-    const x = event.clientX;
-    const y = event.clientY;
+    const { x, y } = getMousePos(event);
 
     // Save the completed wall to the walls array
     currentLine.x2 = x; // Finalize the end point of the wall

@@ -6,18 +6,87 @@
     <title>2D and 3D House Modeling</title>
     
     <style>
-        body { margin: 0; display: flex; flex-direction: column; }
-        #2d-canvas { width: 100%; height: 50vh; border: 1px solid black; }
-        #threejs-canvas { width: 100%; height: 50vh; }
-        input { margin: 5px; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #2C3E50;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar img {
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        .sidebar input, .sidebar button {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .sidebar input {
+            background-color: #ecf0f1;
+            color: #2C3E50;
+        }
+        .sidebar button {
+            background-color: #e67e22;
+            color: white;
+            cursor: pointer;
+        }
+        .sidebar button:hover {
+            background-color: #d35400;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #2d-canvas {
+            width: 100%;
+            height: 50%;
+            background-color: white;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        #threejs-canvas {
+            width: 100%;
+            height: 50%;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
-    <canvas id="2d-canvas"></canvas>
-    <div id="threejs-canvas"></div>
-    <input type="number" id="wallHeight" placeholder="Height" />
-    <input type="number" id="wallWidth" placeholder="Width" />
-    <button id="addRoof">Add Roof</button>
+    <div class="sidebar">
+        <img src="assets/Riphah Logo.png" alt="Logo">
+        <input type="number" id="wallHeight" placeholder="Height">
+        <input type="number" id="wallWidth" placeholder="Width">
+        <button id="addRoof">Add Roof</button>
+    </div>
+    
+    <div class="main">
+        <div class="canvas-container">
+            <canvas id="2d-canvas"></canvas>
+            <div id="threejs-canvas"></div>
+        </div>
+    </div>
+
     <script type="module" src="./scripts/2d-drawing.js"></script>
     <script type="module" src="./scripts/3d-rendering.js"></script>
 </body>
