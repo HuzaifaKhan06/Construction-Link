@@ -4,41 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign up Page</title>
-    <link rel="stylesheet" href="css/SignUp_Css.css">
+    <link rel="stylesheet" href="css/Signup.css">
 </head>
 <body>
     <div class="login-container">
-        <div class="login-box">
-            <img src="asstes/Logo.jpg" alt="University Logo" class="logo">
+        <div class="Signup-box">
+            <img src="imgs/Logo.jpg" alt="University Logo" class="logo">
             <h1>Construction Link</h1>
             <h3>Create Your Account</h3>
-            <form onsubmit="return validateLogin(event)">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username">
+            <form action="signup.php" method="POST" onsubmit="return validateLogin(event)">
+                <label for="username">Email:</label>
+                <input type="email" id="email" name="email" required>
                 
                 <label for="password">Password:</label>
-                <input type="password" id="password" name="password">
+                <input type="password" id="password" name="password" required>
 
-                <label for="password">Confirm Password:</label>
-                <input type="password" id="Confirm password" name="password">
+                <label for="confirm_password">Confirm Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
                 
-                <label for="remember-me">
-                    <input type="checkbox" id="remember-me" name="remember-me">
-                    Remember Me
-                </label>
 
-                <button type="submit">Sign Up</button>
-                <button type="button" class="google-login">
-                    <img src="/assets/Google_logo-transformed.webp" alt="Google Logo" class="google-logo">
-                    SignUp with Google
+                <button type="submit" class="btn primary-btn">Sign Up</button>
+                <button type="button" class="btn google-login">
+                    <img src="imgs/Google_logo-transformed.webp" alt="Google Logo" class="google-logo">
+                    Sign Up with Google
                 </button>
                 
-                
-                <p class="signup-text">Already have an account? <a href="#">Sign In</a></p>
+                <p class="signup-text">Already have an account? <a href="http://localhost:8080/Projects/Construction%20Link/signup_login_php_prac/Login.php">Sign In</a></p>
             </form>
         </div>
     </div>
-    
-    
 </body>
 </html>

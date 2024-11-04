@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Status</title>
+    <link rel="stylesheet" href="css/verified.css">
+   
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="status-heading"></h1>
+        <p id="status-message"></p>
+        <a href="http://localhost:8080/Projects/Construction%20Link/signup_login_php_prac/Login.php" class="btn">Go to Login</a>
+    </div>
+
+    <script>
+        // Function to get query parameters
+        function getQueryParameter(parameter) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(parameter);
+        }
+
+        // Get the 'email' parameter to determine the status
+        const emailStatus = getQueryParameter('email');
+        const statusHeading = document.getElementById('status-heading');
+        const statusMessage = document.getElementById('status-message');
+
+        if (emailStatus === 'success') {
+            statusHeading.textContent = 'Email Verified Successfully';
+            statusMessage.textContent = 'Your email has been verified. You can now log in to your account.';
+            statusHeading.classList.add('success');
+        } else {
+            statusHeading.textContent = 'Verification Failed';
+            statusMessage.textContent = 'The verification link is invalid or has expired. Please try again.';
+            statusHeading.classList.add('error');
+        }
+    </script>
+
+</body>
+</html>
