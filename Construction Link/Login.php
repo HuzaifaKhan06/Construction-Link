@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
 
                 <button type="submit">Login</button>
-                <button type="button" class="google-login">
+                <button type="button" class="google-login" onclick="window.location.href='http://localhost:3000/auth/google'">
                     <img src="imgs/Google_logo-transformed.webp" alt="Google Logo" class="google-logo">
                     Login with Google
                 </button>
