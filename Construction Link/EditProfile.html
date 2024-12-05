@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Profile</title>
+  <link rel="stylesheet" href="css/editProfile.css">
+</head>
+<body>
+  <div class="profile-container">
+    <h1>Edit Your Profile</h1>
+    <form action="/edit-profile" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="first_name">First Name</label>
+        <input type="text" id="first_name" name="first_name" value="<%= user.first_name %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="last_name">Last Name</label>
+        <input type="text" id="last_name" name="last_name" value="<%= user.last_name %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" value="<%= user.username %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="cnic">CNIC (13 digits)</label>
+        <input type="text" id="cnic" name="cnic" maxlength="13" minlength="13" pattern="\d{13}" value="<%= user.cnic %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="phone_number">Phone Number</label>
+        <input type="text" id="phone_number" name="phone_number" pattern="\d{11}" value="<%= user.phone_number %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="profile_picture">Profile Picture</label>
+        <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
+        <div class="profile-picture-preview" id="preview-container">
+          <% if (user.profile_picture) { %>
+            <img src="/uploads/<%= user.profile_picture %>" alt="Profile Picture" id="image-preview">
+          <% } %>
+        </div>
+      </div>
+
+      <button type="submit">Save Changes</button>
+    </form>
+  </div>
+
+  <script>
+    // Preview uploaded image in a circular shape
+    const profileInput = document.getElementById('profile_picture');
+    const previewContainer = document.getElementById('preview-container');
+    const imagePreview = document.getElementById('image-preview');
+
+    profileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (!imagePreview) {
+            const img = document.createElement('img');
+            img.id = 'image-preview';
+            img.src = e.target.result;
+            img.style.borderRadius = '50%';
+            previewContainer.innerHTML = '';
+            previewContainer.appendChild(img);
+          } else {
+            imagePreview.src = e.target.result;
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  </script>
+</body>
+</html>
