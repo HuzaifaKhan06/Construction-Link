@@ -40,28 +40,31 @@ try {
 
 // Handling profile update
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $first_name = $_POST['first_name'];
-    $last_name = $_POST['last_name'];
-    $username = $_POST['username'];
-    $cnic = $_POST['cnic'];
-    $phone_number = $_POST['phone_number'];
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
+    $username = trim($_POST['username']);
+    $cnic = trim($_POST['cnic']);
+    $phone_number = trim($_POST['phone_number']);
 
     // Handle Profile Picture Upload
-    $profile_picture = '';
+    $profile_picture = $user['profile_image'];
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
         $target_dir = "uploads/";
         $target_file = $target_dir . basename($_FILES['profile_picture']['name']);
         
-        // Check if file upload is valid
-        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
-            $profile_picture = basename($_FILES['profile_picture']['name']);
+        // Validate file type
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        if (in_array($_FILES['profile_picture']['type'], $allowed_types)) {
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
+                $profile_picture = basename($_FILES['profile_picture']['name']);
+            } else {
+                echo "Error uploading the file.";
+                exit();
+            }
         } else {
-            echo "Error uploading the file.";
+            echo "Invalid file type. Only JPG, PNG, and GIF are allowed.";
             exit();
         }
-    } else {
-        // If no new image uploaded, retain the old image
-        $profile_picture = $user['profile_image'];
     }
 
     // Validate all form fields before updating
@@ -70,23 +73,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
-    // Debugging: Check if there are any actual changes
-    if ($first_name === $user['first_name'] && $last_name === $user['last_name'] && 
-        $username === $user['username'] && $cnic === $user['cnic'] && 
-        $phone_number === $user['phone_number'] && $profile_picture === $user['profile_image']) {
-        echo "No changes were made to the profile.";
-        exit();
-    }
-
     try {
-        // Check if user exists and update or insert accordingly
-        if ($user) {
-            // Update existing user data in commonusers table
-            $stmt = $pdo->prepare("UPDATE commonusers SET first_name = ?, last_name = ?, username = ?, cnic = ?, phone_number = ?, profile_image = ? WHERE user_id = ?");
-            $stmt->execute([$first_name, $last_name, $username, $cnic, $phone_number, $profile_picture, $user_id]);
+        // Update or insert user data
+        if ($user && !empty($user['user_id'])) {
+            // Check for changes
+            $stmt = $pdo->prepare("SELECT * FROM commonusers WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $existing_user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Check if update was successful
-            if ($stmt->rowCount() > 0) {
+            $data_changed = (
+                $existing_user['first_name'] !== $first_name ||
+                $existing_user['last_name'] !== $last_name ||
+                $existing_user['username'] !== $username ||
+                $existing_user['cnic'] !== $cnic ||
+                $existing_user['phone_number'] !== $phone_number ||
+                $existing_user['profile_image'] !== $profile_picture
+            );
+
+            if ($data_changed) {
+                // Update existing user data
+                $stmt = $pdo->prepare("UPDATE commonusers SET first_name = ?, last_name = ?, username = ?, cnic = ?, phone_number = ?, profile_image = ? WHERE user_id = ?");
+                $stmt->execute([$first_name, $last_name, $username, $cnic, $phone_number, $profile_picture, $user_id]);
                 header("Location: EditProfile.php?success=1");
                 exit();
             } else {
@@ -94,15 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 exit();
             }
         } else {
-            // If no profile exists, insert new data into commonusers
+            // Insert new user data if no profile exists
             $stmt = $pdo->prepare("INSERT INTO commonusers (user_id, first_name, last_name, username, cnic, phone_number, profile_image) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$user_id, $first_name, $last_name, $username, $cnic, $phone_number, $profile_picture]);
-
             header("Location: EditProfile.php?success=1");
             exit();
         }
     } catch (PDOException $e) {
         echo "Error: " . $e->getMessage();
+        exit();
     }
 }
 ?>
@@ -119,9 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="profile-container">
         <h1>Edit Your Profile</h1>
 
-        <!-- Success message if form submission was successful -->
         <?php if (isset($_GET['success'])): ?>
-            <p>Your profile has been updated successfully!</p>
+            <p class="success-message">Your profile has been updated successfully!</p>
         <?php endif; ?>
 
         <form action="EditProfile.php" method="POST" enctype="multipart/form-data">
@@ -156,16 +162,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="profile-picture-preview" id="preview-container">
                     <?php if ($user['profile_image']) { ?>
                         <img src="uploads/<?php echo htmlspecialchars($user['profile_image']); ?>" alt="Profile Picture" id="image-preview">
+                    <?php } else { ?>
+                        <p>No profile picture uploaded</p>
                     <?php } ?>
                 </div>
             </div>
 
-            <button type="submit">Save Changes</button>
+            <button type="submit" class="update-button">Save Changes</button>
         </form>
     </div>
 
     <script>
-        // Preview uploaded image in a circular shape
         const profileInput = document.getElementById('profile_picture');
         const previewContainer = document.getElementById('preview-container');
         const imagePreview = document.getElementById('image-preview');

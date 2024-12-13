@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Provider Dashboard</title>
+    <link rel="stylesheet" href="css/material_providers.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <div class="logo">Construction Link</div>
+            <ul class="nav-links">
+                <li><a href="#">Create Design</a></li>
+                <li><a href="#">Upload Items</a></li>
+                <li><a href="#">View Orders</a></li>
+                <li><a href="#">Sales</a></li>
+                <li class="dropdown">
+                    <a href="#">Switch Profile</a>
+                    <div class="dropdown-content">
+                        <a href="#">Switch to Users</a>
+                    </div>
+                </li>
+                <li><a href="#" class="profile-icon">Profile</a></li>
+            </ul>
+        </nav>
+
+        <!-- Dashboard Header -->
+        <header class="dashboard-header">
+            <h1>Material Provider Dashboard</h1>
+            <p class="welcome-message">Welcome, <span>Someone!</span></p>
+        </header>
+
+        <!-- Material Cards Section -->
+        <section class="material-section">
+            <div class="material-card">
+                <div class="image-placeholder">Image</div>
+                <div class="material-info">
+                    <p>Price: <span>$10</span></p>
+                    <p>Description: <span>High-quality cement</span></p>
+                </div>
+                <div class="action-buttons">
+                    <button class="edit-button">Edit</button>
+                    <button class="delete-button">Delete</button>
+                </div>
+            </div>
+            <!-- Add more cards dynamically if needed -->
+        </section>
+    </div>
+</body>
+</html>

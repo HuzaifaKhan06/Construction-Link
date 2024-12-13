@@ -1,0 +1,157 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f7f7f7;
+}
+
+.navbar {
+    background-color: #333;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    align-items: center;
+    color: white;
+    position: relative;
+}
+
+.navbar .logo {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.navbar .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+    margin: 0;
+}
+
+.navbar .nav-links li {
+    display: inline;
+    position: relative;
+}
+
+.navbar .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.navbar .profile-icon {
+    border: 2px solid white;
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.navbar .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: white;
+    color: black;
+    min-width: 150px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    top: 40px;
+}
+
+.navbar .dropdown-content a {
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    color: black;
+    font-size: 14px;
+}
+
+.navbar .dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+.navbar .dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dashboard-header {
+    background-color: #4c4747;
+    text-align: center;
+    padding: 20px;
+    color: white;
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.welcome-message {
+    font-size: 18px;
+    margin-top: 10px;
+}
+
+.material-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+    justify-content: center;
+}
+
+.material-card {
+    background-color: white;
+    width: 200px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    text-align: center;
+}
+
+.material-card .image-placeholder {
+    background-color: #e0e0e0;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 16px;
+}
+
+.material-card .material-info {
+    padding: 10px;
+}
+
+.material-card .material-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.material-card .material-info span {
+    font-weight: bold;
+}
+
+.material-card .action-buttons {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+}
+
+.material-card .edit-button, .material-card .delete-button {
+    background-color: #ff6600;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.material-card .delete-button {
+    background-color: #cc3300;
+}
+
+.material-card .edit-button:hover, .material-card .delete-button:hover {
+    opacity: 0.9;
+}

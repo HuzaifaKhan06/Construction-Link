@@ -8,6 +8,45 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css" integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+  <?php
+  session_start();
+
+  if (!isset($_SESSION['user_id'])) {
+      header("Location: login.php"); // Redirect to login if not logged in
+      exit();
+  }
+
+  $user_id = $_SESSION['user_id'];
+  $user_name = "";
+  $profile_image = "";
+
+  try {
+      $pdo = new PDO('mysql:host=localhost;dbname=constructionlink', 'root', '', [
+          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+      ]);
+
+      $stmt = $pdo->prepare("SELECT first_name, last_name, username, profile_image FROM commonusers WHERE user_id = ?");
+      $stmt->execute([$user_id]);
+      $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+      if ($user) {
+          if (!empty($user['first_name']) && !empty($user['last_name'])) {
+              $user_name = $user['first_name'] . ' ' . $user['last_name'];
+          } else {
+              $user_name = $user['username'];
+          }
+          $profile_image = $user['profile_image'];
+      } else {
+          $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+          $stmt->execute([$user_id]);
+          $user_name = $stmt->fetch(PDO::FETCH_ASSOC)['email'];
+      }
+  } catch (PDOException $e) {
+      echo "Error: " . $e->getMessage();
+      exit();
+  }
+  ?>
+
   <!-- Navigation Bar -->
   <nav class="navbar">
     <div class="logo">Construction Link</div>
@@ -23,9 +62,15 @@
             </div>
         </li>
         <li class="dropdown">
-    <a href="#" class="user-icon"><i class="fa-solid fa-user"></i></a>
+    <a href="#" class="user-icon">
+      <?php if (!empty($profile_image)): ?>
+        <img src="uploads/<?php echo htmlspecialchars($profile_image); ?>" alt="Profile Image" style="width:30px; height:30px; border-radius:50%;">
+      <?php else: ?>
+        <i class="fa-solid fa-user"></i>
+      <?php endif; ?>
+    </a>
     <div class="dropdown-content">
-        <a href="./EditProfile.html">Edit Profile</a>
+        <a href="./EditProfile.php">Edit Profile</a>
         <a href="./Login.php">Logout</a>
     </div>
 </li>
@@ -45,7 +90,7 @@
 
   <!-- Dashboard Section -->
   <div class="dashboard">
-    <h2>Welcome, Abdul Noman Razzaq</h2>
+    <h2>Welcome, <?php echo htmlspecialchars($user_name); ?></h2>
     <div class="dashboard-options">
       <div class="option-card" id="createDesign">
         <h3>Create a House Design</h3>
