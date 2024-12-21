@@ -1,139 +1,191 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D and 3D House Modeling</title>
+  <style>
+      body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          display: flex;
+          height: 100vh;
+          background-color: #f4f4f4;
+      }
+      .sidebar {
+          width: 200px;
+          background-color: #2C3E50;
+          padding: 20px;
+          box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+      }
+      .sidebar img {
+          border-radius: 50%;
+          width: 80px;
+          height: 80px;
+          margin-bottom: 20px;
+      }
+      .sidebar input, .sidebar button {
+          width: 100%;
+          margin-bottom: 15px;
+          padding: 10px;
+          border: none;
+          border-radius: 5px;
+          font-size: 14px;
+      }
+      .sidebar input {
+          background-color: #ecf0f1;
+          color: #2C3E50;
+      }
+      .sidebar button {
+          background-color: #e67e22;
+          color: white;
+          cursor: pointer;
+      }
+      .sidebar button:hover {
+          background-color: #d35400;
+      }
+      .main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+      }
+      .canvas-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+      }
+      #2d-canvas {
+          width: 100%;
+          height: 50%;
+          background-color: white;
+          border-bottom: 2px solid #ecf0f1;
+      }
+      #threejs-canvas {
+          width: 100%;
+          height: 50%;
+          background-color: white;
+      }
 
-<meta charset="UTF-8">
+      /* Additional styling for buttons and elements from the second code */
+      .extra-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 20px;
+      }
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+      .delete-button {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          background-color: red;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          display: none; /* Initially hidden */
+      }
+      .endpoint {
+          width: 10px;
+          height: 10px;
+          background-color: blue;
+          border-radius: 50%;
+          position: absolute;
+          display: none; /* Initially hidden */
+      }
 
-<title>2D and 3D House Modeling</title>
-<style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        display: flex;
-        height: 100vh;
-        background-color: #f4f4f4;
-    }
-    .sidebar {
-        width: 200px;
-        background-color: #2C3E50;
-        padding: 20px;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .sidebar img {
-        border-radius: 50%;
-        width: 80px;
-        height: 80px;
-        margin-bottom: 20px;
-    }
-    .sidebar input, .sidebar button {
-        width: 100%;
-        margin-bottom: 15px;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        font-size: 14px;
-    }
-    .sidebar input {
-        background-color: #ecf0f1;
-        color: #2C3E50;
-    }
-    .sidebar button {
-        background-color: #e67e22;
-        color: white;
-        cursor: pointer;
-    }
-    .sidebar button:hover {
-        background-color: #d35400;
-    }
-    .main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    .canvas-container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    #2d-canvas {
-        width: 100%;
-        height: 50%;
-        background-color: white;
-        border-bottom: 2px solid #ecf0f1;
-    }
-    #threejs-canvas {
-        width: 100%;
-        height: 50%;
-        background-color: white;
-    }
+      /* Three-dots button styling */
+      .three-dots-button {
+          position: absolute;
+          width: 30px;
+          height: 30px;
+          background-color: #666;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          display: none; /* Initially hidden */
+          font-size: 18px;
+          line-height: 0.9;
+      }
 
-    /* Additional styling for buttons and elements from the second code */
-    .extra-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 20px;
-    }
-
-    .delete-button {
-        position: absolute;
-        width: 20px;
-        height: 20px;
-        background-color: red;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-        display: none; /* Initially hidden */
-    }
-    .endpoint {
-        width: 10px;
-        height: 10px;
-        background-color: blue;
-        border-radius: 50%;
-        position: absolute;
-        display: none; /* Initially hidden */
-    }
-</style>
+      /* Small form for length editing */
+      #lengthForm {
+          position: absolute;
+          display: none; /* hidden by default */
+          background-color: #fff;
+          border: 1px solid #ccc;
+          padding: 10px;
+          border-radius: 5px;
+          width: 150px;
+          z-index: 999; /* ensure it's on top */
+      }
+      #lengthForm label {
+          font-size: 12px;
+          margin-right: 5px;
+      }
+      #lengthForm input, #lengthForm select {
+          width: 100%;
+          margin-bottom: 8px;
+          padding: 5px;
+          box-sizing: border-box;
+      }
+      #lengthForm button {
+          background-color: #e67e22;
+          color: white;
+          cursor: pointer;
+          border: none;
+          border-radius: 3px;
+          width: 100%;
+          padding: 5px;
+      }
+      #lengthForm button:hover {
+          background-color: #d35400;
+      }
+  </style>
 </head>
 
 <body>
 
 <div class="sidebar">
+  <img src="assets/Riphah Logo.png" alt="Logo">
+  <!-- Input fields for wall height and width -->
+  <input type="number" id="wallHeight" placeholder="Height">
+  <input type="number" id="wallWidth" placeholder="Width">
 
-<img src="assets/Riphah Logo.webp" alt="Logo">
-<!-- Input fields for wall height and width -->
-<input type="number" id="wallHeight" placeholder="Height">
-<input type="number" id="wallWidth" placeholder="Width">
+  <!-- Buttons for adding roof and wall types -->
+  <button id="addRoof">Add Roof</button>
 
-<!-- Buttons for adding roof and wall types -->
-<button id="addRoof">Add Roof</button>
-
-<!-- Additional buttons from the second code -->
-<div class="extra-buttons">
-    <button id="brickWall">Brick Wall</button>
-    <button id="blockWall">Block Wall</button>
-    <button id="updateWalls">Update Walls</button>
-</div>
+  <div class="extra-buttons">
+      <button id="brickWall">Brick Wall</button>
+      <button id="blockWall">Block Wall</button>
+      <button id="updateWalls">Update Walls</button>
+  </div>
 </div>
 
 <div class="main">
-<div class="canvas-container">
-    <canvas id="2d-canvas"></canvas>
-    <div id="threejs-canvas"></div>
+  <div class="canvas-container">
+      <canvas id="2d-canvas"></canvas>
+      <div id="threejs-canvas"></div>
+  </div>
 </div>
+
+<!-- Hidden form for editing length -->
+<div id="lengthForm">
+  <label for="lengthValue">Length:</label>
+  <input type="number" id="lengthValue" placeholder="0">
+  <select id="lengthUnit">
+    <option value="m">Meter</option>
+    <option value="ft">Foot</option>
+  </select>
+  <button id="setLengthBtn">Set Length</button>
 </div>
 
 <script type="module" src="./scripts/2d-drawing.js"></script>
 <script type="module" src="./scripts/3d-rendering.js"></script>
 </body>
-
 </html>
