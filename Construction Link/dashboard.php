@@ -51,21 +51,13 @@
   <nav class="navbar">
     <div class="logo">Construction Link</div>
     <ul class="nav-links">
-<<<<<<< HEAD
       <li><a href="./CreateDesign.html">Create House Design</a></li>
-=======
-      <li><a href="./check.html">Create House Design</a></li>
->>>>>>> d5973c052910f72d80d31fbdffa9c6331db96055
       <li><a href="#materialEstimation">Estimate Material Costs</a></li>
       <li><a href="#costEstimation">Cost Estimation</a></li>
       <li class="dropdown">
             Switch Profile 
             <div class="dropdown-content">
-<<<<<<< HEAD
                 <a href="Materialregister.php">Switch to Material Provider</a>
-=======
-                <a href="#">Switch to Material Provider</a>
->>>>>>> d5973c052910f72d80d31fbdffa9c6331db96055
                 <a href="#">Switch to Construction Company</a>
             </div>
         </li>
@@ -103,11 +95,7 @@
       <div class="option-card" id="createDesign">
         <h3>Create a House Design</h3>
         <p>Design your dream house with our easy-to-use tools.</p>
-<<<<<<< HEAD
         <a href="./CreateDesign.html" class="button">Start Designing</a>
-=======
-        <a href="./check.html" class="button">Start Designing</a>
->>>>>>> d5973c052910f72d80d31fbdffa9c6331db96055
       </div>
       <div class="option-card" id="materialEstimation">
         <h3>Estimate Material Costs</h3>

@@ -1,275 +1,274 @@
 /* Basic reset and box-sizing */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  /* Body styling */
-  body {
-    font-family: Arial, sans-serif;
-    color: #333;
-    /* Subtle gradient background */
-    background: linear-gradient(135deg, #fafafa 40%, #e3f2fd 100%);
-  }
-  
-  /* Container that holds both divisions */
-  .container {
-    display: flex;
-    min-height: 100vh;
-  }
-  
-  /* Left Division */
-  .left-division {
-    flex: 1;
-    background-color: #333;
-    padding: 50px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  
-  .left-division h1 {
-    margin-bottom: 20px;
-    font-size: 2rem;
-    color: #fff;
-  }
-  
-  .left-division p {
-    line-height: 1.6;
-    margin-bottom: 20px;
-    color: #fff;
-  }
-  
-  .left-division h2 {
-    margin: 30px 0 10px;
-    font-size: 1.5rem;
-    color: #fff;
-  }
-  
-  .left-division ul {
-    list-style-type: disc;
-    margin-left: 20px;
-    margin-bottom: 20px;
-    line-height: 1.8;
-  }
-  
-  .left-division ul li {
-    color: #fff;
-    cursor: default;
-  }
-  
-  .left-division ul li:hover {
-    text-decoration: underline;
-  }
-  
-  .highlight {
-    font-weight: bold;
-    color: #fff;
-    margin-top: 20px;
-  }
-  
-  /* Right Division */
-  .right-division {
-    flex: 1;
-    position: relative;
-    overflow: hidden; /* ensures form slides in/out cleanly */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Background image on the right side */
-  .background-image {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: url("../imgs/bg_material_provider_regstration_btn_pic.webp") center/cover no-repeat;
-    opacity: 0.9;
-    transition: opacity 0.5s ease-in-out;
-  }
-  
-  /* Hover effect on background to add an interactive feel */
-  .right-division:hover .background-image {
-    opacity: 0.75;
-  }
-  
-  /* Register button */
-  .register-btn {
-    position: relative;
-    z-index: 2; /* Above the background image */
-    padding: 15px 25px;
-    font-size: 1rem;
-    background-color: #333;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    border-radius: 30px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    transition: all 0.3s ease;
-  }
-  
-  .register-btn:hover {
-    background-color: #575757;
-    transform: translateY(-3px);
-  }
-  
-  /* Sliding form container */
-  .form-container {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100%; /* Covers entire right side width */
-    height: 100%; /* Covers entire height */
-    background-color: #ffffff;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-  
-    /* Initially hidden (translated off-screen) */
-    transform: translateX(100%);
-    transition: transform 0.5s ease-in-out;
-    z-index: 3; /* Above background and button */
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto; /* In case form is longer than screen height */
-  }
-  
-  /* When the form is active/open, slide in from the right */
-  .form-container.active {
-    transform: translateX(0);
-  }
-  
-  /* Form header */
-  .form-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-  
-  .form-header h3 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #333;
-  }
-  
-  /* Close button */
-  .close-btn {
-    font-size: 2rem;
-    cursor: pointer;
-    line-height: 1;
-    color: #333;
-    transition: color 0.3s ease;
-  }
-  
-  .close-btn:hover {
-    color: #c62828;
-  }
-  
-  /* Form styling */
-  form {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* Focus states for better accessibility */
-  form input[type="text"]:focus,
-  form input[type="email"]:focus,
-  form input[type="tel"]:focus,
-  form textarea:focus,
-  form select:focus {
-    outline: none;
-    border: 2px solid #007bff;
-  }
-  
-  form label {
-    margin: 10px 0 5px;
-    font-weight: bold;
-    color: #555;
-  }
-  
-  form input[type="text"],
-  form input[type="email"],
-  form input[type="tel"],
-  form textarea,
-  form select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  form textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-  
-  /* Image Upload Section */
-  .image-upload-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center horizontally */
-    margin-bottom: 20px; /* Spacing below */
-  }
-  
-  .circle-container {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-bottom: 10px;
-    border: 2px solid #ccc; /* Optional border for clarity */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  #previewImg {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* Style the file input */
-  #companyLogo {
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    padding: 8px;
-    border: 1px solid #ccc;
-    width: 80%;       /* optional width, adjust as needed */
-    max-width: 300px; /* optional max-width */
-    text-align: center;
-    margin-bottom: 10px;
-  }
-  
-  /* Checkbox Group */
-  .checkbox-group {
-    display: flex;
-    align-items: center;
-    margin-top: 10px;
-  }
-  
-  .checkbox-group label {
-    margin: 0 0 0 5px;
-    font-weight: normal;
-    color: #666;
-  }
-  
-  /* Submit button */
-  .submit-btn {
-    margin-top: 20px;
-    padding: 12px;
-    background-color: #333;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: background-color 0.3s ease;
-  }
-  
-  .submit-btn:hover {
-    background-color: #575757;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  }
-  
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body styling */
+body {
+  font-family: Arial, sans-serif;
+  color: #333;
+  /* Subtle gradient background */
+  background: linear-gradient(135deg, #fafafa 40%, #e3f2fd 100%);
+}
+
+/* Container that holds both divisions */
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Left Division */
+.left-division {
+  flex: 1;
+  background-color: #333;
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.left-division h1 {
+  margin-bottom: 20px;
+  font-size: 2rem;
+  color: #fff;
+}
+
+.left-division p {
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.left-division h2 {
+  margin: 30px 0 10px;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.left-division ul {
+  list-style-type: disc;
+  margin-left: 20px;
+  margin-bottom: 20px;
+  line-height: 1.8;
+}
+
+.left-division ul li {
+  color: #fff;
+  cursor: default;
+}
+
+.left-division ul li:hover {
+  text-decoration: underline;
+}
+
+.highlight {
+  font-weight: bold;
+  color: #fff;
+  margin-top: 20px;
+}
+
+/* Right Division */
+.right-division {
+  flex: 1;
+  position: relative;
+  overflow: hidden; /* ensures form slides in/out cleanly */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background image on the right side */
+.background-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: url("../imgs/bg_material_provider_regstration_btn_pic.webp") center/cover no-repeat;
+  opacity: 0.9;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* Hover effect on background to add an interactive feel */
+.right-division:hover .background-image {
+  opacity: 0.75;
+}
+
+/* Register button */
+.register-btn {
+  position: relative;
+  z-index: 2; /* Above the background image */
+  padding: 15px 25px;
+  font-size: 1rem;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 30px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
+
+.register-btn:hover {
+  background-color: #575757;
+  transform: translateY(-3px);
+}
+
+/* Sliding form container */
+.form-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%; /* Covers entire right side width */
+  height: 100%; /* Covers entire height */
+  background-color: #ffffff;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+
+  /* Initially hidden (translated off-screen) */
+  transform: translateX(100%);
+  transition: transform 0.5s ease-in-out;
+  z-index: 3; /* Above background and button */
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* In case form is longer than screen height */
+}
+
+/* When the form is active/open, slide in from the right */
+.form-container.active {
+  transform: translateX(0);
+}
+
+/* Form header */
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.form-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+/* Close button */
+.close-btn {
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+  color: #333;
+  transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+  color: #c62828;
+}
+
+/* Form styling */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Focus states for better accessibility */
+form input[type="text"]:focus,
+form input[type="email"]:focus,
+form input[type="tel"]:focus,
+form textarea:focus,
+form select:focus {
+  outline: none;
+  border: 2px solid #007bff;
+}
+
+form label {
+  margin: 10px 0 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="tel"],
+form textarea,
+form select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+form textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Image Upload Section */
+.image-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center horizontally */
+  margin-bottom: 20px; /* Spacing below */
+}
+
+.circle-container {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 2px solid #ccc; /* Optional border for clarity */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Style the file input */
+#companyLogo {
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  padding: 8px;
+  border: 1px solid #ccc;
+  width: 80%;       /* optional width, adjust as needed */
+  max-width: 300px; /* optional max-width */
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Checkbox Group */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.checkbox-group label {
+  margin: 0 0 0 5px;
+  font-weight: normal;
+  color: #666;
+}
+
+/* Submit button */
+.submit-btn {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.submit-btn:hover {
+  background-color: #575757;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}

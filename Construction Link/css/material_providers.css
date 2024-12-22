@@ -42,36 +42,25 @@ body {
 .navbar .profile-icon {
     border: 2px solid white;
     border-radius: 50%;
-    padding: 5px;
-}
-
-.navbar .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: white;
-    color: black;
-    min-width: 150px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    z-index: 1;
-    border-radius: 4px;
+    padding: 0; /* Remove padding to make image circular without extra space */
+    width: 30px; /* سائز کم کیا گیا */
+    height: 30px;
     overflow: hidden;
-    top: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 }
 
-.navbar .dropdown-content a {
-    padding: 10px 15px;
-    text-decoration: none;
-    display: block;
-    color: black;
-    font-size: 14px;
+.navbar .profile-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
-.navbar .dropdown-content a:hover {
-    background-color: #f1f1f1;
-}
-
-.navbar .dropdown:hover .dropdown-content {
-    display: block;
+.navbar .profile-icon i {
+    font-size: 20px; /* ڈیفالٹ آئیکون کا سائز کم کیا گیا */
 }
 
 .dashboard-header {
@@ -138,7 +127,8 @@ body {
     padding: 10px;
 }
 
-.material-card .edit-button, .material-card .delete-button {
+.material-card .edit-button,
+.material-card .delete-button {
     background-color: #ff6600;
     color: white;
     border: none;
@@ -152,6 +142,37 @@ body {
     background-color: #cc3300;
 }
 
-.material-card .edit-button:hover, .material-card .delete-button:hover {
+.material-card .edit-button:hover,
+.material-card .delete-button:hover {
     opacity: 0.9;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: white;
+    color: black;
+    min-width: 150px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    top: 40px; 
+    right: 0;
+}
+
+.dropdown-content a {
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    color: black;
+    font-size: 14px;
+}
+
+.dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+.show {
+    display: block;
 }
