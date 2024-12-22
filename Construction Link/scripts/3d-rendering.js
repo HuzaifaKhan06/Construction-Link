@@ -1,3 +1,5 @@
+// 3d_rendering.js
+
 import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
 
@@ -6,10 +8,10 @@ const PIXELS_PER_METER = 20;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / (window.innerHeight / 2),
-  0.1,
-  2000
+    75,
+    window.innerWidth / (window.innerHeight / 2),
+    0.1,
+    2000
 );
 camera.position.set(0, 15, 50);
 camera.lookAt(0, 0, 0);
@@ -28,91 +30,85 @@ const wallMeshes = [];
 
 // Auto-adjust camera
 function adjustCameraToFitObject(object) {
-  const boundingBox = new THREE.Box3().setFromObject(object);
-  const center = boundingBox.getCenter(new THREE.Vector3());
-  const size = boundingBox.getSize(new THREE.Vector3());
+    const boundingBox = new THREE.Box3().setFromObject(object);
+    const center = boundingBox.getCenter(new THREE.Vector3());
+    const size = boundingBox.getSize(new THREE.Vector3());
 
-  const maxDim = Math.max(size.x, size.y, size.z);
-  const fov = camera.fov * (Math.PI / 180); 
-  let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
 
-  cameraZ *= 1.5;
-  camera.position.set(center.x, center.y + cameraZ / 3, cameraZ);
-  camera.lookAt(center);
-  controls.target.copy(center);
-  controls.update();
+    cameraZ *= 1.5;
+    camera.position.set(center.x, center.y + cameraZ / 3, cameraZ);
+    camera.lookAt(center);
+    controls.target.copy(center);
+    controls.update();
 }
 
-// Convert user’s chosen height & thickness to meters
+// Use the thickness passed directly
 function getWallHeight() {
-  const hVal = parseFloat(document.getElementById('wallHeight').value) || 10;
-  const hUnit = document.getElementById('heightUnit').value;
-  return (hUnit === 'ft') ? (hVal * 0.3048) : hVal;
-}
-function getWallThickness() {
-  const tVal = parseFloat(document.getElementById('wallWidth').value) || 1;
-  const tUnit = document.getElementById('widthUnit').value;
-  return (tUnit === 'ft') ? (tVal * 0.3048) : tVal;
+    const hVal = parseFloat(document.getElementById('wallHeight').value) || 10;
+    const hUnit = document.getElementById('heightUnit').value;
+    return (hUnit === 'ft') ? (hVal * 0.3048) : hVal;
 }
 
-function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture) {
-  // Pixel distance in 2D
-  const lengthPx = Math.hypot(x2 - x1, y2 - y1);
-  // Convert to meters
-  const lengthM = lengthPx / PIXELS_PER_METER;
+function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness) {
+    // Pixel distance in 2D
+    const lengthPx = Math.hypot(x2 - x1, y2 - y1);
+    // Convert to meters
+    const lengthM = lengthPx / PIXELS_PER_METER;
 
-  // Retrieve height & thickness in meters
-  const height = getWallHeight();
-  const thickness = getWallThickness();
+    // Retrieve height in meters
+    const height = getWallHeight();
 
-  // Load texture
-  const textureLoader = new THREE.TextureLoader();
-  const wallTexture = textureLoader.load(texture);
+    // Load texture
+    const textureLoader = new THREE.TextureLoader();
+    const wallTexture = textureLoader.load(texture);
 
-  // Create geometry
-  const wallGeometry = new THREE.BoxGeometry(lengthM, height, thickness);
-  const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
-  const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    // Create geometry
+    const wallGeometry = new THREE.BoxGeometry(lengthM, height, thickness);
+    const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
 
-  // Position in 3D
-  wall.position.set(
-    ((x1 + x2) / 2 - canvasWidth / 4) / PIXELS_PER_METER,
-    height / 2,
-    -((y1 + y2) / 2 - canvasHeight / 2) / PIXELS_PER_METER
-  );
+    // Position in 3D
+    wall.position.set(
+        ((x1 + x2) / 2 - canvasWidth / 4) / PIXELS_PER_METER,
+        height / 2,
+        -((y1 + y2) / 2 - canvasHeight / 2) / PIXELS_PER_METER
+    );
 
-  // Rotate around Y
-  wall.rotation.y = Math.atan2(y2 - y1, x2 - x1);
+    // Rotate around Y
+    wall.rotation.y = Math.atan2(y2 - y1, x2 - x1);
 
-  scene.add(wall);
-  walls.push({ x1, y1, x2, y2, texture });
-  wallMeshes.push(wall);
+    scene.add(wall);
+    walls.push({ x1, y1, x2, y2, texture, thickness: thickness });
+    wallMeshes.push(wall);
 
-  adjustCameraToFitObject(scene);
+    adjustCameraToFitObject(scene);
 }
 
 // Listen for "add-wall" from 2D
 window.addEventListener('add-wall', (evt) => {
-  const { x1, y1, x2, y2, canvasWidth, canvasHeight, texture } = evt.detail;
-  createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture);
+    const { x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness } = evt.detail;
+    createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness);
 });
 
 // Listen for "update-all-walls"
 window.addEventListener('update-all-walls', (evt) => {
-  const { walls: wallData, canvasWidth, canvasHeight } = evt.detail;
+    const { walls: wallData, canvasWidth, canvasHeight } = evt.detail;
 
-  // Remove existing
-  wallMeshes.forEach(mesh => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-  });
-  wallMeshes.length = 0;
+    // Remove existing
+    wallMeshes.forEach(mesh => {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+    });
+    wallMeshes.length = 0;
 
-  // Recreate all
-  wallData.forEach(w => {
-    createWall(w.x1, w.y1, w.x2, w.y2, canvasWidth, canvasHeight, w.texture);
-  });
+    // Recreate all
+    wallData.forEach(w => {
+        createWall(w.x1, w.y1, w.x2, w.y2, canvasWidth, canvasHeight, w.texture, w.thickness);
+    });
 });
 
 // Light
@@ -122,60 +118,60 @@ scene.add(light);
 
 // Roof creation
 function createRoof(canvasWidth, canvasHeight) {
-  if (walls.length < 2) {
-    console.warn('Not enough walls to create a roof');
-    return;
-  }
-  const minX = Math.min(...walls.map(w => Math.min(w.x1, w.x2)));
-  const maxX = Math.max(...walls.map(w => Math.max(w.x1, w.x2)));
-  const minY = Math.min(...walls.map(w => Math.min(w.y1, w.y2)));
-  const maxY = Math.max(...walls.map(w => Math.max(w.y1, w.y2)));
+    if (walls.length < 2) {
+        console.warn('Not enough walls to create a roof');
+        return;
+    }
+    const minX = Math.min(...walls.map(w => Math.min(w.x1, w.x2)));
+    const maxX = Math.max(...walls.map(w => Math.max(w.x1, w.x2)));
+    const minY = Math.min(...walls.map(w => Math.min(w.y1, w.y2)));
+    const maxY = Math.max(...walls.map(w => Math.max(w.y1, w.y2)));
 
-  const widthM = (maxX - minX + 2) / PIXELS_PER_METER;
-  const depthM = (maxY - minY + 2) / PIXELS_PER_METER;
-  const wallHeight = getWallHeight();
+    const widthM = (maxX - minX + 2) / PIXELS_PER_METER;
+    const depthM = (maxY - minY + 2) / PIXELS_PER_METER;
+    const wallHeight = getWallHeight();
 
-  const textureLoader = new THREE.TextureLoader();
-  const roofTexture = textureLoader.load('./imgs/roof_texture.jpg');
+    const textureLoader = new THREE.TextureLoader();
+    const roofTexture = textureLoader.load('./imgs/roof_texture.jpg');
 
-  // Flat roof
-  const roofGeometry = new THREE.BoxGeometry(widthM, 0.2, depthM);
-  const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
-  const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+    // Flat roof
+    const roofGeometry = new THREE.BoxGeometry(widthM, 0.2, depthM);
+    const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
+    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
 
-  const midX = (minX + maxX) / 2 - canvasWidth / 4;
-  const midY = (minY + maxY) / 2 - canvasHeight / 2;
+    const midX = (minX + maxX) / 2 - canvasWidth / 4;
+    const midY = (minY + maxY) / 2 - canvasHeight / 2;
 
-  roof.position.set(
-    midX / PIXELS_PER_METER,
-    wallHeight + 0.1,
-    -midY / PIXELS_PER_METER
-  );
+    roof.position.set(
+        midX / PIXELS_PER_METER,
+        wallHeight + 0.1,
+        -midY / PIXELS_PER_METER
+    );
 
-  // optional peaked roof
-  const peakHeight = 1;
-  const roofPeakGeometry = new THREE.ConeGeometry(widthM / 2, peakHeight, 4);
-  const roofPeakMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
-  const roofPeak = new THREE.Mesh(roofPeakGeometry, roofPeakMaterial);
-  roofPeak.position.set(roof.position.x, wallHeight + peakHeight, roof.position.z);
-  roofPeak.rotation.y = Math.PI / 4;
+    // Optional peaked roof
+    const peakHeight = 1;
+    const roofPeakGeometry = new THREE.ConeGeometry(widthM / 2, peakHeight, 4);
+    const roofPeakMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
+    const roofPeak = new THREE.Mesh(roofPeakGeometry, roofPeakMaterial);
+    roofPeak.position.set(roof.position.x, wallHeight + peakHeight, roof.position.z);
+    roofPeak.rotation.y = Math.PI / 4;
 
-  scene.add(roof);
-  scene.add(roofPeak);
+    scene.add(roof);
+    scene.add(roofPeak);
 
-  adjustCameraToFitObject(scene);
+    adjustCameraToFitObject(scene);
 }
 
 document.getElementById('addRoof').addEventListener('click', () => {
-  const canvasWidth = window.innerWidth;
-  const canvasHeight = window.innerHeight / 2;
-  createRoof(canvasWidth, canvasHeight);
+    const canvasWidth = window.innerWidth;
+    const canvasHeight = window.innerHeight / 2;
+    createRoof(canvasWidth, canvasHeight);
 });
 
 // Animate
 function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
 }
 animate();

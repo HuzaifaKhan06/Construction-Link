@@ -1,25 +1,27 @@
+// 2d-drawing.js
+
 const canvas = document.getElementById('2d-canvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = window.innerWidth; 
-canvas.height = window.innerHeight / 2; 
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight / 2;
 
 // We'll treat 20 pixels == 1 meter internally
 const PIXELS_PER_METER = 20;
 
 let walls = [];
-let drawing = false; 
-let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 }; 
-let selectedWall = null; 
-let isDragging = false; 
+let drawing = false;
+let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
+let selectedWall = null;
+let isDragging = false;
 
 // Default texture and wall type
-let wallTexture = './imgs/brick_texture.jpg'; 
+let wallTexture = './imgs/brick_texture.jpg';
 let currentWallType = 'brick'; // "brick" or "block"
 
 // For resizing endpoints
-let resizing = false; 
-let resizingPoint = null; 
+let resizing = false;
+let resizingPoint = null;
 
 // Create a delete button
 const deleteButton = document.createElement('button');
@@ -53,24 +55,48 @@ const estimateBtn = document.getElementById('estimateMaterials');
 // HTML elements for wall height & thickness
 const wallHeightInput = document.getElementById('wallHeight');
 const heightUnitSelect = document.getElementById('heightUnit');
-const wallWidthInput = document.getElementById('wallWidth');
-const widthUnitSelect = document.getElementById('widthUnit');
+const wallWidthSelect = document.getElementById('wallWidth');
+
+// Estimation Modal elements
+const estimationModal = document.getElementById('estimationModal');
+const estimationDetails = document.getElementById('estimationDetails');
+const closeEstimationBtn = document.getElementById('closeEstimation');
 
 // Helper to convert user input to meters
 function getWallHeightInMeters() {
-  const val = parseFloat(wallHeightInput.value) || 0;
-  return (heightUnitSelect.value === 'ft') ? (val * 0.3048) : val;
+    const val = parseFloat(wallHeightInput.value) || 0;
+    return (heightUnitSelect.value === 'ft') ? (val * 0.3048) : val;
 }
+
 function getWallThicknessInMeters() {
-  const val = parseFloat(wallWidthInput.value) || 0;
-  return (widthUnitSelect.value === 'ft') ? (val * 0.3048) : val;
+    const selectedOption = wallWidthSelect.value;
+    // Map selected options to thickness in meters
+    // Options: "4in", "9in_brick", "13in_brick", "18in_brick", "8in_block", "18in", "27in"
+    switch(selectedOption) {
+        case '4in':
+            return 4 * 0.0254; // 4 inches to meters
+        case '9in_brick':
+            return 9 * 0.0254; // 9 inches
+        case '13in_brick':
+            return 13 * 0.0254; // 13 inches
+        case '18in_brick':
+            return 18 * 0.0254; // 18 inches
+        case '8in_block':
+            return 8 * 0.0254; // 8 inches
+        case '18in':
+            return 18 * 0.0254; // 18 inches
+        case '27in':
+            return 27 * 0.0254; // 27 inches
+        default:
+            return 0.1; // default thickness in meters
+    }
 }
 
 // Get mouse position relative to canvas
 function getMousePos(event) {
     const rect = canvas.getBoundingClientRect();
     return {
-        x: event.clientX - rect.left, 
+        x: event.clientX - rect.left,
         y: event.clientY - rect.top
     };
 }
@@ -97,6 +123,7 @@ drawGrid();
 canvas.addEventListener('mousedown', (event) => {
     const { x, y } = getMousePos(event);
     lengthForm.style.display = 'none'; // Hide length form if open
+    estimationModal.style.display = 'none'; // Hide estimation modal if open
 
     const clickedWall = walls.find(wall => isPointOnLine(x, y, wall));
     if (clickedWall) {
@@ -123,6 +150,11 @@ canvas.addEventListener('mousedown', (event) => {
         currentLine.y1 = y;
         deleteButton.style.display = 'none';
         threeDotsButton.style.display = 'none';
+        if (selectedWall) {
+            selectedWall.highlighted = false;
+            selectedWall = null;
+            redraw();
+        }
     }
 });
 
@@ -170,8 +202,10 @@ canvas.addEventListener('mousemove', (event) => {
 
     if (isDragging && selectedWall) {
         // Drag entire wall
-        const dx = x - (selectedWall.x1 + selectedWall.x2) / 2;
-        const dy = y - (selectedWall.y1 + selectedWall.y2) / 2;
+        const midX = (selectedWall.x1 + selectedWall.x2) / 2;
+        const midY = (selectedWall.y1 + selectedWall.y2) / 2;
+        const dx = x - midX;
+        const dy = y - midY;
 
         selectedWall.x1 += dx;
         selectedWall.y1 += dy;
@@ -179,10 +213,10 @@ canvas.addEventListener('mousemove', (event) => {
         selectedWall.y2 += dy;
 
         redraw();
-        const midX = (selectedWall.x1 + selectedWall.x2) / 2;
-        const midY = (selectedWall.y1 + selectedWall.y2) / 2;
-        showDeleteButton(midX, midY);
-        showThreeDotsButton(midX, midY);
+        const newMidX = (selectedWall.x1 + selectedWall.x2) / 2;
+        const newMidY = (selectedWall.y1 + selectedWall.y2) / 2;
+        showDeleteButton(newMidX, newMidY);
+        showThreeDotsButton(newMidX, newMidY);
         drawEnds();
 
         endpoint1.style.display = 'none';
@@ -199,7 +233,7 @@ canvas.addEventListener('mousemove', (event) => {
 
     redraw();
     drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, 'black');
-
+    
     // Show dynamic length in meters
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
@@ -227,11 +261,12 @@ canvas.addEventListener('mouseup', (event) => {
             unitType: 'm',            // 'm' or 'ft'
             texture: wallTexture,
             wallType: currentWallType,  
+            thickness: getWallThicknessInMeters(),
             highlighted: false
         });
 
         // Add to 3D
-        add3DWall(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, canvas.width, canvas.height, wallTexture);
+        add3DWall(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, canvas.width, canvas.height, wallTexture, getWallThicknessInMeters());
 
         currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
         deleteButton.style.display = 'none';
@@ -345,21 +380,21 @@ function redraw() {
     drawWalls();
 }
 
-function drawWalls() {
-    walls.forEach(wall => {
-        const color = wall.highlighted ? 'red' : 'black';
-        drawLine(wall.x1, wall.y1, wall.x2, wall.y2, color);
-        drawLengthText(wall);
-    });
-}
-
-function drawLine(x1, y1, x2, y2, color = 'black') {
+function drawLine(x1, y1, x2, y2, color = 'black', thickness = 2) {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = thickness;
     ctx.stroke();
+}
+
+function drawWalls() {
+    walls.forEach(wall => {
+        // Convert wall thickness from meters to pixels
+        const thicknessInPixels = wall.thickness * PIXELS_PER_METER;
+        drawLine(wall.x1, wall.y1, wall.x2, wall.y2, wall.highlighted ? 'red' : 'black', thicknessInPixels);
+    });
 }
 
 function drawEnds() {
@@ -400,8 +435,8 @@ function isPointOnLine(px, py, wall) {
     const distance = Math.abs(
         (wall.y2 - wall.y1) * px -
         (wall.x2 - wall.x1) * py +
-         wall.x2 * wall.y1 -
-         wall.y2 * wall.x1
+        wall.x2 * wall.y1 -
+        wall.y2 * wall.x1
     ) / Math.sqrt(
         Math.pow(wall.y2 - wall.y1, 2) + Math.pow(wall.x2 - wall.x1, 2)
     );
@@ -439,6 +474,15 @@ function calculateMaterialEstimation() {
         return;
     }
 
+    // Define brick and block sizes in meters
+    const brickLength = 9 * 0.0254; // 9 inches to meters
+    const brickWidth = 4 * 0.0254;  // 4 inches
+    const brickHeight = 3 * 0.0254; // 3 inches
+
+    const blockLength = 18 * 0.0254; // 18 inches
+    const blockHeight = 6 * 0.0254;  // 6 inches
+    const blockWidth = 8 * 0.0254;   // 8 inches
+
     // We'll accumulate separate volumes for brick walls and block walls
     let totalBrickVolume = 0; 
     let totalBlockVolume = 0;
@@ -447,6 +491,7 @@ function calculateMaterialEstimation() {
         // The length in meters is stored in wall.lengthMeter
         // Volume = length * height * thickness
         const volume = wall.lengthMeter * wallH * wallT;
+
         if (wall.wallType === 'brick') {
             totalBrickVolume += volume;
         } else if (wall.wallType === 'block') {
@@ -454,55 +499,60 @@ function calculateMaterialEstimation() {
         }
     });
 
-    // Suppose:
-    // - Volume of one standard brick ~ 0.0015 m^3
-    // - Volume of one standard block ~ 0.0075 m^3
-    const volumePerBrick = 0.0015; 
-    const volumePerBlock = 0.0075;
+    // Calculate number of bricks and blocks based on their sizes
+    const brickVolume = brickLength * brickWidth * brickHeight; // m³ per brick
+    const blockVolume = blockLength * blockHeight * blockWidth; // m³ per block
 
     // Calculate how many bricks/blocks needed (round up)
-    const numBricks = Math.ceil(totalBrickVolume / volumePerBrick);
-    const numBlocks = Math.ceil(totalBlockVolume / volumePerBlock);
+    const numBricks = Math.ceil(totalBrickVolume / brickVolume);
+    const numBlocks = Math.ceil(totalBlockVolume / blockVolume);
 
     // Mortar ~ 20% of total volume, ratio cement:sand = 1:5
     const mortarVolumeBrick = 0.2 * totalBrickVolume;
     const mortarVolumeBlock = 0.2 * totalBlockVolume;
     const totalMortarVolume = mortarVolumeBrick + mortarVolumeBlock;
 
-    // 1 bag cement = ~0.035 m^3, ratio is 1 part cement, 5 parts sand
+    // 1 bag cement = ~0.035 m³, ratio is 1 part cement, 5 parts sand
     const totalCementVolume = totalMortarVolume / 6; 
     const totalSandVolume = (5 * totalMortarVolume) / 6;
     const bagsCement = Math.ceil(totalCementVolume / 0.035);
     const sandCubicMeters = totalSandVolume.toFixed(2);
 
     // Prepare a summary
-    let message = 'Material Estimation:\n\n';
-    message += `Brick Walls Volume: ${totalBrickVolume.toFixed(2)} m³\n`;
-    message += `Block Walls Volume: ${totalBlockVolume.toFixed(2)} m³\n\n`;
+    let message = '<p><strong>Brick Walls Volume:</strong> ' + totalBrickVolume.toFixed(2) + ' m³</p>';
+    message += '<p><strong>Block Walls Volume:</strong> ' + totalBlockVolume.toFixed(2) + ' m³</p><hr>';
 
     if (numBricks > 0) {
-        message += `Bricks Required: ${numBricks}\n`;
+        message += '<p><strong>Bricks Required:</strong> ' + numBricks + '</p>';
     }
     if (numBlocks > 0) {
-        message += `Blocks Required: ${numBlocks}\n`;
+        message += '<p><strong>Blocks Required:</strong> ' + numBlocks + '</p>';
     }
 
-    message += `\nMortar Volume (approx): ${totalMortarVolume.toFixed(2)} m³\n`;
-    message += `Bags of Cement (approx): ${bagsCement}\n`;
-    message += `Sand (approx): ${sandCubicMeters} m³\n`;
+    message += '<hr>';
+    message += '<p><strong>Mortar Volume (approx):</strong> ' + totalMortarVolume.toFixed(2) + ' m³</p>';
+    message += '<p><strong>Bags of Cement (approx):</strong> ' + bagsCement + '</p>';
+    message += '<p><strong>Sand (approx):</strong> ' + sandCubicMeters + ' m³</p>';
 
-    alert(message);
+    // Display in the estimation modal
+    estimationDetails.innerHTML = message;
+    estimationModal.style.display = 'flex';
 }
 
+// Close Estimation Modal
+closeEstimationBtn.addEventListener('click', () => {
+    estimationModal.style.display = 'none';
+});
+
 // Dispatch event to 3D side
-function add3DWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture) {
-    const ev = new CustomEvent('add-wall', { detail: { x1, y1, x2, y2, canvasWidth, canvasHeight, texture } });
+function add3DWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness) {
+    const ev = new CustomEvent('add-wall', { detail: { x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness } });
     window.dispatchEvent(ev);
 }
 
 // Update all walls in 3D
 function updateAllWalls() {
-    const ev = new CustomEvent('update-all-walls', { 
+    const ev = new CustomEvent('update-all-walls', {
         detail: { walls, canvasWidth: canvas.width, canvasHeight: canvas.height }
     });
     window.dispatchEvent(ev);
