@@ -1,7 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
 
-// Same scale as 2D: 20 px = 1 meter
+// Same 20 px = 1 meter as in 2D
 const PIXELS_PER_METER = 20;
 
 const scene = new THREE.Scene();
@@ -26,7 +26,7 @@ controls.enableZoom = true;
 const walls = [];
 const wallMeshes = [];
 
-// Auto-adjust camera to fit scene
+// Auto-adjust camera
 function adjustCameraToFitObject(object) {
   const boundingBox = new THREE.Box3().setFromObject(object);
   const center = boundingBox.getCenter(new THREE.Vector3());
@@ -43,27 +43,38 @@ function adjustCameraToFitObject(object) {
   controls.update();
 }
 
+// Convert user’s chosen height & thickness to meters
+function getWallHeight() {
+  const hVal = parseFloat(document.getElementById('wallHeight').value) || 10;
+  const hUnit = document.getElementById('heightUnit').value;
+  return (hUnit === 'ft') ? (hVal * 0.3048) : hVal;
+}
+function getWallThickness() {
+  const tVal = parseFloat(document.getElementById('wallWidth').value) || 1;
+  const tUnit = document.getElementById('widthUnit').value;
+  return (tUnit === 'ft') ? (tVal * 0.3048) : tVal;
+}
+
 function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture) {
-  // Pixel distance
+  // Pixel distance in 2D
   const lengthPx = Math.hypot(x2 - x1, y2 - y1);
-  // Convert px to meters
+  // Convert to meters
   const lengthM = lengthPx / PIXELS_PER_METER;
 
-  // Read user input for wall height/width
-  const height = parseFloat(document.getElementById('wallHeight').value) || 10;
-  const thickness = parseFloat(document.getElementById('wallWidth').value) || 1;
+  // Retrieve height & thickness in meters
+  const height = getWallHeight();
+  const thickness = getWallThickness();
 
   // Load texture
   const textureLoader = new THREE.TextureLoader();
   const wallTexture = textureLoader.load(texture);
 
-  // Create geometry in meters
+  // Create geometry
   const wallGeometry = new THREE.BoxGeometry(lengthM, height, thickness);
   const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
   const wall = new THREE.Mesh(wallGeometry, wallMaterial);
 
   // Position in 3D
-  // (x - canvasWidth/4) to shift center, then convert px->m
   wall.position.set(
     ((x1 + x2) / 2 - canvasWidth / 4) / PIXELS_PER_METER,
     height / 2,
@@ -80,13 +91,13 @@ function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture) {
   adjustCameraToFitObject(scene);
 }
 
-// Listen for "add-wall" from 2D side
+// Listen for "add-wall" from 2D
 window.addEventListener('add-wall', (evt) => {
   const { x1, y1, x2, y2, canvasWidth, canvasHeight, texture } = evt.detail;
   createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture);
 });
 
-// Listen for "update-all-walls" from 2D side
+// Listen for "update-all-walls"
 window.addEventListener('update-all-walls', (evt) => {
   const { walls: wallData, canvasWidth, canvasHeight } = evt.detail;
 
@@ -98,7 +109,7 @@ window.addEventListener('update-all-walls', (evt) => {
   });
   wallMeshes.length = 0;
 
-  // Recreate all walls with updated data
+  // Recreate all
   wallData.forEach(w => {
     createWall(w.x1, w.y1, w.x2, w.y2, canvasWidth, canvasHeight, w.texture);
   });
@@ -115,27 +126,23 @@ function createRoof(canvasWidth, canvasHeight) {
     console.warn('Not enough walls to create a roof');
     return;
   }
-  // bounding box in 2D
   const minX = Math.min(...walls.map(w => Math.min(w.x1, w.x2)));
   const maxX = Math.max(...walls.map(w => Math.max(w.x1, w.x2)));
   const minY = Math.min(...walls.map(w => Math.min(w.y1, w.y2)));
   const maxY = Math.max(...walls.map(w => Math.max(w.y1, w.y2)));
 
-  // Convert to meters
   const widthM = (maxX - minX + 2) / PIXELS_PER_METER;
   const depthM = (maxY - minY + 2) / PIXELS_PER_METER;
-
-  const wallHeight = parseFloat(document.getElementById('wallHeight').value) || 10;
+  const wallHeight = getWallHeight();
 
   const textureLoader = new THREE.TextureLoader();
-  const roofTexture = textureLoader.load('./assets/roof_texture.jpg');
+  const roofTexture = textureLoader.load('./imgs/roof_texture.jpg');
 
   // Flat roof
   const roofGeometry = new THREE.BoxGeometry(widthM, 0.2, depthM);
   const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
   const roof = new THREE.Mesh(roofGeometry, roofMaterial);
 
-  // position roof
   const midX = (minX + maxX) / 2 - canvasWidth / 4;
   const midY = (minY + maxY) / 2 - canvasHeight / 2;
 

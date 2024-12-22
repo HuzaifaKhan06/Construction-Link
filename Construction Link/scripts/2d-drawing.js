@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth; 
 canvas.height = window.innerHeight / 2; 
 
-// We'll treat 20 pixels == 1 meter
+// We'll treat 20 pixels == 1 meter internally
 const PIXELS_PER_METER = 20;
 
 let walls = [];
@@ -12,7 +12,12 @@ let drawing = false;
 let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 }; 
 let selectedWall = null; 
 let isDragging = false; 
-let wallTexture = './assets/brick_texture.jpg'; 
+
+// Default texture and wall type
+let wallTexture = './imgs/brick_texture.jpg'; 
+let currentWallType = 'brick'; // "brick" or "block"
+
+// For resizing endpoints
 let resizing = false; 
 let resizingPoint = null; 
 
@@ -41,6 +46,25 @@ const lengthForm = document.getElementById('lengthForm');
 const lengthValueInput = document.getElementById('lengthValue');
 const lengthUnitSelect = document.getElementById('lengthUnit');
 const setLengthBtn = document.getElementById('setLengthBtn');
+
+// Material Estimation button
+const estimateBtn = document.getElementById('estimateMaterials');
+
+// HTML elements for wall height & thickness
+const wallHeightInput = document.getElementById('wallHeight');
+const heightUnitSelect = document.getElementById('heightUnit');
+const wallWidthInput = document.getElementById('wallWidth');
+const widthUnitSelect = document.getElementById('widthUnit');
+
+// Helper to convert user input to meters
+function getWallHeightInMeters() {
+  const val = parseFloat(wallHeightInput.value) || 0;
+  return (heightUnitSelect.value === 'ft') ? (val * 0.3048) : val;
+}
+function getWallThicknessInMeters() {
+  const val = parseFloat(wallWidthInput.value) || 0;
+  return (widthUnitSelect.value === 'ft') ? (val * 0.3048) : val;
+}
 
 // Get mouse position relative to canvas
 function getMousePos(event) {
@@ -72,8 +96,7 @@ drawGrid();
 
 canvas.addEventListener('mousedown', (event) => {
     const { x, y } = getMousePos(event);
-    // Hide length form on any new click
-    lengthForm.style.display = 'none';
+    lengthForm.style.display = 'none'; // Hide length form if open
 
     const clickedWall = walls.find(wall => isPointOnLine(x, y, wall));
     if (clickedWall) {
@@ -167,6 +190,7 @@ canvas.addEventListener('mousemove', (event) => {
         return;
     }
 
+    // If we are not dragging or resizing but we are drawing a new line
     if (!drawing) return;
 
     // Drawing new line in progress
@@ -192,16 +216,17 @@ canvas.addEventListener('mouseup', (event) => {
         const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
         const lengthM = lengthPx / PIXELS_PER_METER;
 
-        // Store a new wall object
+        // Add the new wall to our array
         walls.push({
             x1: currentLine.x1,
             y1: currentLine.y1,
             x2: currentLine.x2,
             y2: currentLine.y2,
-            lengthMeter: lengthM,        // internal measure in meters
-            displayLength: lengthM,      // displayed value (by default same as meter)
-            unitType: 'm',               // 'm' or 'ft'
+            lengthMeter: lengthM,     // internal measure in meters
+            displayLength: lengthM,   // displayed value (by default same as meter)
+            unitType: 'm',            // 'm' or 'ft'
             texture: wallTexture,
+            wallType: currentWallType,  
             highlighted: false
         });
 
@@ -255,13 +280,11 @@ threeDotsButton.addEventListener('click', () => {
     lengthForm.style.top = `${topPos}px`;
     lengthForm.style.display = 'block';
 
-    // Prefill lengthValueInput and dropdown from wall
+    // Prefill lengthValueInput from wall
     if (selectedWall.unitType === 'ft') {
-        // Display length is in feet
         lengthValueInput.value = selectedWall.displayLength;
         lengthUnitSelect.value = 'ft';
     } else {
-        // default is 'm'
         lengthValueInput.value = selectedWall.displayLength;
         lengthUnitSelect.value = 'm';
     }
@@ -284,10 +307,10 @@ setLengthBtn.addEventListener('click', () => {
     // If user picks foot, convert foot to meters for internal scaling
     let newLengthM = newVal;
     if (lengthUnitSelect.value === 'ft') {
-        newLengthM = newVal * 0.3048; // foot to meter
+        newLengthM = newVal * 0.3048; // foot -> meter
     }
 
-    // Ratio for scaling the existing wall geometry in 2D
+    // ratio for scaling
     const ratio = newLengthM / oldLengthM;
 
     // Rescale around midpoint
@@ -299,21 +322,20 @@ setLengthBtn.addEventListener('click', () => {
     selectedWall.x2 = midX + (selectedWall.x2 - midX) * ratio;
     selectedWall.y2 = midY + (selectedWall.y2 - midY) * ratio;
 
-    // Update the wall's internal meter length
+    // Update internal meter length
     selectedWall.lengthMeter = newLengthM;
 
-    // Update the displayed value and unit
+    // Update displayed value and unit
     if (lengthUnitSelect.value === 'ft') {
-        selectedWall.displayLength = newVal;    // user typed foot
+        selectedWall.displayLength = newVal; 
         selectedWall.unitType = 'ft';
     } else {
-        selectedWall.displayLength = newVal;    // user typed meter
+        selectedWall.displayLength = newVal; 
         selectedWall.unitType = 'm';
     }
 
     redraw();
     updateAllWalls();
-
     lengthForm.style.display = 'none';
 });
 
@@ -352,14 +374,12 @@ function drawEnds() {
     ctx.fill();
 }
 
-// Show the length text of a wall
 function drawLengthText(wall) {
     const midX = (wall.x1 + wall.x2) / 2;
     const midY = (wall.y1 + wall.y2) / 2;
     ctx.font = '12px Arial';
     ctx.fillStyle = 'red';
 
-    // If wall.unitType is 'ft', show ft; else show m
     let suffix = wall.unitType === 'ft' ? ' ft' : ' m';
     let text = wall.displayLength.toFixed(2) + suffix;
     ctx.fillText(text, midX, midY - 10);
@@ -388,17 +408,91 @@ function isPointOnLine(px, py, wall) {
     return distance < tolerance;
 }
 
-// For roof or other 3D updates
+// Updating the 3D scene
 document.getElementById('updateWalls').addEventListener('click', () => {
     updateAllWalls();
 });
 
+// Texture selection
 document.getElementById('brickWall').addEventListener('click', () => {
-    wallTexture = './assets/brick_texture.jpg';
+    wallTexture = './imgs/brick_texture.jpg';
+    currentWallType = 'brick';
 });
 document.getElementById('blockWall').addEventListener('click', () => {
-    wallTexture = './assets/block_texture.jpg';
+    wallTexture = './imgs/block_texture.jpg';
+    currentWallType = 'block';
 });
+
+// Material Estimation Button
+estimateBtn.addEventListener('click', () => {
+    calculateMaterialEstimation();
+});
+
+// Calculate material estimation
+function calculateMaterialEstimation() {
+    // We'll get wall height & thickness in meters
+    const wallH = getWallHeightInMeters();
+    const wallT = getWallThicknessInMeters();
+
+    if (wallH <= 0 || wallT <= 0) {
+        alert('Please enter valid wall Height and Thickness first!');
+        return;
+    }
+
+    // We'll accumulate separate volumes for brick walls and block walls
+    let totalBrickVolume = 0; 
+    let totalBlockVolume = 0;
+
+    walls.forEach(wall => {
+        // The length in meters is stored in wall.lengthMeter
+        // Volume = length * height * thickness
+        const volume = wall.lengthMeter * wallH * wallT;
+        if (wall.wallType === 'brick') {
+            totalBrickVolume += volume;
+        } else if (wall.wallType === 'block') {
+            totalBlockVolume += volume;
+        }
+    });
+
+    // Suppose:
+    // - Volume of one standard brick ~ 0.0015 m^3
+    // - Volume of one standard block ~ 0.0075 m^3
+    const volumePerBrick = 0.0015; 
+    const volumePerBlock = 0.0075;
+
+    // Calculate how many bricks/blocks needed (round up)
+    const numBricks = Math.ceil(totalBrickVolume / volumePerBrick);
+    const numBlocks = Math.ceil(totalBlockVolume / volumePerBlock);
+
+    // Mortar ~ 20% of total volume, ratio cement:sand = 1:5
+    const mortarVolumeBrick = 0.2 * totalBrickVolume;
+    const mortarVolumeBlock = 0.2 * totalBlockVolume;
+    const totalMortarVolume = mortarVolumeBrick + mortarVolumeBlock;
+
+    // 1 bag cement = ~0.035 m^3, ratio is 1 part cement, 5 parts sand
+    const totalCementVolume = totalMortarVolume / 6; 
+    const totalSandVolume = (5 * totalMortarVolume) / 6;
+    const bagsCement = Math.ceil(totalCementVolume / 0.035);
+    const sandCubicMeters = totalSandVolume.toFixed(2);
+
+    // Prepare a summary
+    let message = 'Material Estimation:\n\n';
+    message += `Brick Walls Volume: ${totalBrickVolume.toFixed(2)} m³\n`;
+    message += `Block Walls Volume: ${totalBlockVolume.toFixed(2)} m³\n\n`;
+
+    if (numBricks > 0) {
+        message += `Bricks Required: ${numBricks}\n`;
+    }
+    if (numBlocks > 0) {
+        message += `Blocks Required: ${numBlocks}\n`;
+    }
+
+    message += `\nMortar Volume (approx): ${totalMortarVolume.toFixed(2)} m³\n`;
+    message += `Bags of Cement (approx): ${bagsCement}\n`;
+    message += `Sand (approx): ${sandCubicMeters} m³\n`;
+
+    alert(message);
+}
 
 // Dispatch event to 3D side
 function add3DWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture) {
