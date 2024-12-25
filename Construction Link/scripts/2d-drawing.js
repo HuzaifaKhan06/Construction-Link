@@ -16,8 +16,8 @@ let selectedWall = null;
 let isDragging = false;
 
 // Default texture and wall type
-let wallTexture = './imgs/brick_texture.jpg';
-let currentWallType = 'brick'; // "brick" or "block"
+let wallTexture = null; // No default texture
+let currentWallType = null; // No wall type selected by default
 
 // For resizing endpoints
 let resizing = false;
@@ -57,10 +57,27 @@ const wallHeightInput = document.getElementById('wallHeight');
 const heightUnitSelect = document.getElementById('heightUnit');
 const wallWidthSelect = document.getElementById('wallWidth');
 
-// Estimation Modal elements
-const estimationModal = document.getElementById('estimationModal');
-const estimationDetails = document.getElementById('estimationDetails');
-const closeEstimationBtn = document.getElementById('closeEstimation');
+// Custom Alert elements
+const customAlert = document.getElementById('customAlert');
+const alertMessage = document.getElementById('alertMessage');
+const closeAlertBtn = document.querySelector('#customAlert .close-btn');
+
+// Loading Overlay
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+// Content Wrapper for Blurring
+const content = document.getElementById('content');
+
+// Function to show custom alert
+function showCustomAlert(message) {
+    alertMessage.textContent = message;
+    customAlert.style.display = 'block';
+}
+
+// Close custom alert
+closeAlertBtn.addEventListener('click', () => {
+    customAlert.style.display = 'none';
+});
 
 // Helper to convert user input to meters
 function getWallHeightInMeters() {
@@ -71,9 +88,9 @@ function getWallHeightInMeters() {
 function getWallThicknessInMeters() {
     const selectedOption = wallWidthSelect.value;
     // Map selected options to thickness in meters
-    // Options: "4in", "9in_brick", "13in_brick", "18in_brick", "8in_block", "18in", "27in"
+    // Options: "4in_brick", "9in_brick", "13in_brick", "18in_brick", "8in_block", "18in_block", "27in_block"
     switch(selectedOption) {
-        case '4in':
+        case '4in_brick':
             return 4 * 0.0254; // 4 inches to meters
         case '9in_brick':
             return 9 * 0.0254; // 9 inches
@@ -83,9 +100,9 @@ function getWallThicknessInMeters() {
             return 18 * 0.0254; // 18 inches
         case '8in_block':
             return 8 * 0.0254; // 8 inches
-        case '18in':
+        case '18in_block':
             return 18 * 0.0254; // 18 inches
-        case '27in':
+        case '27in_block':
             return 27 * 0.0254; // 27 inches
         default:
             return 0.1; // default thickness in meters
@@ -120,10 +137,14 @@ function drawGrid() {
 }
 drawGrid();
 
+// Variable to store the currently hovered wall
+let hoveredWall = null;
+let lastHoveredWall = null; // To track changes
+
 canvas.addEventListener('mousedown', (event) => {
     const { x, y } = getMousePos(event);
     lengthForm.style.display = 'none'; // Hide length form if open
-    estimationModal.style.display = 'none'; // Hide estimation modal if open
+    // estimationModal.style.display = 'none'; // Removed since estimation is now on a separate page
 
     const clickedWall = walls.find(wall => isPointOnLine(x, y, wall));
     if (clickedWall) {
@@ -144,6 +165,17 @@ canvas.addEventListener('mousedown', (event) => {
         // Show endpoints
         showEndpoints(selectedWall);
     } else {
+        if (!currentWallType) {
+            showCustomAlert('Please select a wall type (Brick or Block) before drawing.');
+            return; // Prevent drawing
+        }
+
+        const wallHeight = getWallHeightInMeters();
+        if (wallHeight <= 0) {
+            showCustomAlert('Please enter a valid wall height greater than 0.');
+            return; // Prevent drawing
+        }
+
         // Start a new line
         drawing = true;
         currentLine.x1 = x;
@@ -198,7 +230,18 @@ canvas.addEventListener('mousemove', (event) => {
     }
 
     const isHoveringOnWall = walls.some(wall => isPointOnLine(x, y, wall));
-    canvas.style.cursor = isHoveringOnWall ? 'pointer' : 'crosshair';
+    if (isHoveringOnWall) {
+        canvas.style.cursor = 'pointer';
+    } else {
+        canvas.style.cursor = 'crosshair';
+    }
+
+    // Update hoveredWall
+    const newHoveredWall = walls.find(wall => isPointOnLine(x, y, wall)) || null;
+    if (newHoveredWall !== hoveredWall) {
+        hoveredWall = newHoveredWall;
+        redraw(); // Redraw canvas to update wall type text
+    }
 
     if (isDragging && selectedWall) {
         // Drag entire wall
@@ -233,7 +276,7 @@ canvas.addEventListener('mousemove', (event) => {
 
     redraw();
     drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, 'black');
-    
+
     // Show dynamic length in meters
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
@@ -271,6 +314,7 @@ canvas.addEventListener('mouseup', (event) => {
         currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
         deleteButton.style.display = 'none';
         threeDotsButton.style.display = 'none';
+        redraw(); // Ensure the new wall's length is drawn
     }
     isDragging = false;
     resizing = false;
@@ -285,6 +329,13 @@ function showDeleteButton(x, y) {
     deleteButton.style.top = `${y + canvas.offsetTop - 30}px`;
     deleteButton.style.display = 'block';
 }
+
+// Prevent negative values for length in lengthForm
+lengthValueInput.addEventListener('input', () => {
+    if (lengthValueInput.value < 0) {
+        lengthValueInput.value = 0;
+    }
+});
 
 function showThreeDotsButton(x, y) {
     threeDotsButton.style.left = `${x + canvas.offsetLeft + 10}px`;
@@ -331,7 +382,7 @@ setLengthBtn.addEventListener('click', () => {
 
     let newVal = parseFloat(lengthValueInput.value);
     if (isNaN(newVal) || newVal <= 0) {
-        alert('Please enter a valid length');
+        showCustomAlert('Please enter a valid length greater than 0.');
         return;
     }
 
@@ -394,6 +445,11 @@ function drawWalls() {
         // Convert wall thickness from meters to pixels
         const thicknessInPixels = wall.thickness * PIXELS_PER_METER;
         drawLine(wall.x1, wall.y1, wall.x2, wall.y2, wall.highlighted ? 'red' : 'black', thicknessInPixels);
+        drawLengthText(wall); // Draw the length text on each wall
+
+        if (wall === hoveredWall) {
+            drawWallTypeText(wall);
+        }
     });
 }
 
@@ -418,6 +474,16 @@ function drawLengthText(wall) {
     let suffix = wall.unitType === 'ft' ? ' ft' : ' m';
     let text = wall.displayLength.toFixed(2) + suffix;
     ctx.fillText(text, midX, midY - 10);
+}
+
+function drawWallTypeText(wall) {
+    const midX = (wall.x1 + wall.x2) / 2;
+    const midY = (wall.y1 + wall.y2) / 2;
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'green';
+
+    let text = wall.wallType === 'brick' ? 'Brick Wall' : 'Block Wall';
+    ctx.fillText(text, midX, midY + 15); // Positioned below the length text
 }
 
 // Show the dynamic length while drawing
@@ -448,30 +514,105 @@ document.getElementById('updateWalls').addEventListener('click', () => {
     updateAllWalls();
 });
 
-// Texture selection
+// Texture selection with dynamic wallWidth options
 document.getElementById('brickWall').addEventListener('click', () => {
-    wallTexture = './imgs/brick_texture.jpg';
-    currentWallType = 'brick';
+    if (currentWallType === 'brick') {
+        // Deselect brick wall
+        wallTexture = null;
+        currentWallType = null;
+        document.getElementById('brickWall').classList.remove('selected');
+    } else {
+        // Select brick wall
+        wallTexture = './imgs/brick_texture.jpg';
+        currentWallType = 'brick';
+        document.getElementById('brickWall').classList.add('selected');
+        document.getElementById('blockWall').classList.remove('selected');
+    }
+    filterWallWidthOptions(currentWallType);
 });
+
 document.getElementById('blockWall').addEventListener('click', () => {
-    wallTexture = './imgs/block_texture.jpg';
-    currentWallType = 'block';
+    if (currentWallType === 'block') {
+        // Deselect block wall
+        wallTexture = null;
+        currentWallType = null;
+        document.getElementById('blockWall').classList.remove('selected');
+    } else {
+        // Select block wall
+        wallTexture = './imgs/block_texture.jpg';
+        currentWallType = 'block';
+        document.getElementById('blockWall').classList.add('selected');
+        document.getElementById('brickWall').classList.remove('selected');
+    }
+    filterWallWidthOptions(currentWallType);
 });
+
+// Function to filter wallWidth options based on wall type
+function filterWallWidthOptions(wallType) {
+    const options = wallWidthSelect.options;
+    let firstVisibleIndex = -1;
+
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (wallType === 'brick') {
+            if (option.dataset.wallType === 'brick') {
+                option.style.display = 'block';
+                if (firstVisibleIndex === -1) firstVisibleIndex = i;
+            } else {
+                option.style.display = 'none';
+            }
+        } else if (wallType === 'block') {
+            if (option.dataset.wallType === 'block') {
+                option.style.display = 'block';
+                if (firstVisibleIndex === -1) firstVisibleIndex = i;
+            } else {
+                option.style.display = 'none';
+            }
+        } else {
+            // Show all options
+            option.style.display = 'block';
+            if (firstVisibleIndex === -1) firstVisibleIndex = i;
+        }
+    }
+
+    // Reset to first visible option
+    if (firstVisibleIndex !== -1) {
+        wallWidthSelect.selectedIndex = firstVisibleIndex;
+    }
+}
 
 // Material Estimation Button
 estimateBtn.addEventListener('click', () => {
-    calculateMaterialEstimation();
+    handleEstimateMaterials();
 });
 
-// Calculate material estimation
+// Handle Estimate Materials
+function handleEstimateMaterials() {
+    const estimationData = calculateMaterialEstimation();
+    if (!estimationData) return; // If calculation failed, do nothing
+
+    // Store estimation data in localStorage
+    localStorage.setItem('materialEstimation', JSON.stringify(estimationData));
+
+    // Show loading overlay and blur the content
+    loadingOverlay.style.display = 'flex';
+    content.style.filter = 'blur(5px)';
+
+    // After 1.5 seconds, navigate to estimate.html
+    setTimeout(() => {
+        window.location.href = 'estimate.html';
+    }, 1500);
+}
+
+// Calculate material estimation and return data
 function calculateMaterialEstimation() {
     // We'll get wall height & thickness in meters
     const wallH = getWallHeightInMeters();
     const wallT = getWallThicknessInMeters();
 
     if (wallH <= 0 || wallT <= 0) {
-        alert('Please enter valid wall Height and Thickness first!');
-        return;
+        showCustomAlert('Please enter valid wall Height and Thickness first!');
+        return null;
     }
 
     // Define brick and block sizes in meters
@@ -486,11 +627,13 @@ function calculateMaterialEstimation() {
     // We'll accumulate separate volumes for brick walls and block walls
     let totalBrickVolume = 0; 
     let totalBlockVolume = 0;
+    let totalLength = 0; // Total length of all walls
 
     walls.forEach(wall => {
         // The length in meters is stored in wall.lengthMeter
         // Volume = length * height * thickness
         const volume = wall.lengthMeter * wallH * wallT;
+        totalLength += wall.lengthMeter;
 
         if (wall.wallType === 'brick') {
             totalBrickVolume += volume;
@@ -518,31 +661,28 @@ function calculateMaterialEstimation() {
     const bagsCement = Math.ceil(totalCementVolume / 0.035);
     const sandCubicMeters = totalSandVolume.toFixed(2);
 
-    // Prepare a summary
-    let message = '<p><strong>Brick Walls Volume:</strong> ' + totalBrickVolume.toFixed(2) + ' m³</p>';
-    message += '<p><strong>Block Walls Volume:</strong> ' + totalBlockVolume.toFixed(2) + ' m³</p><hr>';
+    // Prepare a summary object
+    const estimationSummary = {
+        totalLength: totalLength.toFixed(2),    // Total length in meters
+        numberOfWalls: walls.length,            // Number of walls
+        height: wallH.toFixed(2),               // Height in meters
+        brickWalls: {
+            volume: totalBrickVolume.toFixed(2),
+            bricksRequired: numBricks
+        },
+        blockWalls: {
+            volume: totalBlockVolume.toFixed(2),
+            blocksRequired: numBlocks
+        },
+        mortar: {
+            totalVolume: totalMortarVolume.toFixed(2),
+            cementBags: bagsCement,
+            sandVolume: sandCubicMeters
+        }
+    };
 
-    if (numBricks > 0) {
-        message += '<p><strong>Bricks Required:</strong> ' + numBricks + '</p>';
-    }
-    if (numBlocks > 0) {
-        message += '<p><strong>Blocks Required:</strong> ' + numBlocks + '</p>';
-    }
-
-    message += '<hr>';
-    message += '<p><strong>Mortar Volume (approx):</strong> ' + totalMortarVolume.toFixed(2) + ' m³</p>';
-    message += '<p><strong>Bags of Cement (approx):</strong> ' + bagsCement + '</p>';
-    message += '<p><strong>Sand (approx):</strong> ' + sandCubicMeters + ' m³</p>';
-
-    // Display in the estimation modal
-    estimationDetails.innerHTML = message;
-    estimationModal.style.display = 'flex';
+    return estimationSummary;
 }
-
-// Close Estimation Modal
-closeEstimationBtn.addEventListener('click', () => {
-    estimationModal.style.display = 'none';
-});
 
 // Dispatch event to 3D side
 function add3DWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness) {
@@ -560,4 +700,8 @@ function updateAllWalls() {
 
 canvas.addEventListener('mouseleave', () => {
     canvas.style.cursor = 'default';
+    if (hoveredWall !== null) {
+        hoveredWall = null;
+        redraw();
+    }
 });
