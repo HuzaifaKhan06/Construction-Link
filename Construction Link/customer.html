@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Company</title>
+    <link rel="stylesheet" href="css/customer.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css" integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="logo">
+            <a href="#">ConstructionLink</a>
+        </div>
+        <div class="hamburger">
+            &#9776;
+        </div>
+        <ul class="nav-items">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">About</a></li>
+            <li class="dropdown">
+                <a href="#" id="services-button">Services &#9662;</a>
+                <ul class="dropdown-menu">
+                    <li><a href="#">Create Design</a></li>
+                    <li><a href="#">Material Listing</a></li>
+                    <li><a href="#">Construction Companies</a></li>
+                </ul>
+            </li>
+            <li><a href="#">Contact Us</a></li>
+            <!-- Profile Dropdown -->
+            <li class="profile-dropdown">
+                <a href="#" id="profile-button"><i class="fa fa-user"></i></a>
+                <ul class="profile-menu">
+                    <li><a href="Login.php">Login</a></li>
+                    <li><a href="Signup.html">Signup</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-slider">
+            <div class="slide" style="background-image: url('imgs/slide-1.jpg');" aria-label="Project 1"></div>
+            <div class="slide" style="background-image: url('imgs/slide-2.jpg');" aria-label="Project 2"></div>
+            <div class="slide" style="background-image: url('imgs/slide-3.jpg');" aria-label="Project 3"></div>
+        </div>
+        <div class="hero-content">
+            <h1>Building Your Dreams</h1>
+            <p>Quality Construction Services for Residential and Commercial Projects</p>
+            <a href="#" class="cta-button">Get Started</a>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <div class="slider-arrows">
+            <span class="prev-arrow">&#10094;</span>
+            <span class="next-arrow">&#10095;</span>
+        </div>
+
+        <!-- Navigation Dots -->
+        <div class="slider-dots">
+            <span class="dot active" data-slide="0"></span>
+            <span class="dot" data-slide="1"></span>
+            <span class="dot" data-slide="2"></span>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services">
+        <h2>Our Services</h2>
+        <div class="service-cards">
+            <div class="card">
+                <img src="https://via.placeholder.com/300x200?text=Design" alt="Create Design">
+                <h3>Create Design</h3>
+                <p>Innovative design solutions tailored to your needs.</p>
+            </div>
+            <div class="card">
+                <img src="https://via.placeholder.com/300x200?text=Materials" alt="Material Listing">
+                <h3>Material Listing</h3>
+                <p>Comprehensive listing of high-quality construction materials.</p>
+            </div>
+            <div class="card">
+                <img src="https://via.placeholder.com/300x200?text=Companies" alt="Construction Companies">
+                <h3>Construction Companies</h3>
+                <p>Connecting you with trusted construction companies.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section class="projects">
+        <h2>Our Projects</h2>
+        <div class="project-gallery">
+            <div class="project-item">
+                <img src="https://via.placeholder.com/400x300?text=Project+1" alt="Commercial Building">
+                <h3>Commercial Building</h3>
+                <p>A state-of-the-art commercial complex in downtown.</p>
+            </div>
+            <div class="project-item">
+                <img src="https://via.placeholder.com/400x300?text=Project+2" alt="Residential Apartments">
+                <h3>Residential Apartments</h3>
+                <p>Modern and spacious apartments for comfortable living.</p>
+            </div>
+            <div class="project-item">
+                <img src="https://via.placeholder.com/400x300?text=Project+3" alt="Industrial Facility">
+                <h3>Industrial Facility</h3>
+                <p>Efficient and scalable industrial facilities.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <h2>What Our Clients Say</h2>
+        <div class="testimonial-cards">
+            <div class="testimonial">
+                <p>"Exceptional service and quality workmanship. Highly recommended!"</p>
+                <h4>John Doe</h4>
+            </div>
+            <div class="testimonial">
+                <p>"They turned our vision into reality with precision and professionalism."</p>
+                <h4>Jane Smith</h4>
+            </div>
+            <div class="testimonial">
+                <p>"Reliable and efficient. Our go-to construction partner."</p>
+                <h4>Mike Johnson</h4>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">
+                <a href="#">ConstrucLogo</a>
+            </div>
+            <div class="footer-links">
+                <a href="#">Home</a>
+                <a href="#">About</a>
+                <a href="#">Services</a>
+                <a href="#">Contact Us</a>
+            </div>
+            <div class="social-media">
+                <a href="#"><img src="https://via.placeholder.com/24?text=FB" alt="Facebook"></a>
+                <a href="#"><img src="https://via.placeholder.com/24?text=TW" alt="Twitter"></a>
+                <a href="#"><img src="https://via.placeholder.com/24?text=IG" alt="Instagram"></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Construction Company. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="scripts/customer.js"></script> <!-- Ensure the correct path -->
+</body>
+</html>

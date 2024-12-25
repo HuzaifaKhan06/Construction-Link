@@ -27,7 +27,8 @@ try {
     $registrationCount = $stmt->fetchColumn();
 
     if ($registrationCount > 0) {
-        $errorMessages[] = "This email has already been registered.";
+        // Removed the error message about already being registered
+        // $errorMessages[] = "This email has already been registered.";
     }
 } catch (PDOException $e) {
     $errorMessages[] = "Database error: " . $e->getMessage();
@@ -96,9 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($errorMessages)) {
     if (empty($address)) {
         $errorMessages[] = "Address is required.";
     }
-    if (!isset($_POST['terms'])) {
-        $errorMessages[] = "You must agree to the Terms & Conditions.";
-    }
+    
 
     // Handle image upload (if any)
     $imagePath = '';
@@ -207,50 +206,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($errorMessages)) {
       .form-container {
         display: none;
       }
-      .already-registered-message {
-        display: block;
-        color: #d8000c;
-        background-color: #ffdddd;
-        padding: 20px;
-        border: 1px solid #d8000c;
-        border-radius: 5px;
-        margin: 20px;
-        text-align: center;
-        opacity: 1; /* Ensure full opacity */
-        transition: opacity 0.3s ease;
-      }
+      /* Removed .already-registered-message styles */
     <?php else: ?>
-      .already-registered-message {
-        display: none;
-      }
+      /* Removed .already-registered-message styles */
     <?php endif; ?>
 
-    /* Styles for the "Move to Dashboard" button */
-    .move-dashboard-btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #4CAF50;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      margin-top: 15px;
-      transition: background-color 0.3s ease;
-      opacity: 1; /* Ensure full opacity */
-    }
+    
 
     .move-dashboard-btn:hover {
-      background-color: #45a049;
+      background-color: #575757;
     }
 
-    /* Optional: Ensure the button is positioned correctly */
-    .right-division {
-      position: relative;
-    }
-
-    /* Optional: Z-index to ensure elements are on top */
-    .already-registered-message, .move-dashboard-btn {
-      z-index: 10;
-    }
+    
   </style>
 </head>
 <body>
@@ -294,15 +261,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($errorMessages)) {
         <button id="openFormBtn" class="register-btn">Register</button>
       <?php endif; ?>
 
-      <!-- Message for Already Registered Users -->
+      <!-- Removed the "Already Registered" Message and "Move to Dashboard" Button -->
+      <!--
       <?php if ($registrationCount > 0): ?>
         <div class="already-registered-message">
           <h2>You have already registered.</h2>
           <p>If you need to update your registration details, please contact support.</p>
         </div>
-        <!-- **4. "Move to Dashboard" Button Placed Outside the Message Div** -->
         <a href="MaterialProviders.php" class="move-dashboard-btn">Move to Dashboard</a>
       <?php endif; ?>
+      -->
 
       <!-- Sliding Registration Form -->
       <div id="registrationForm" class="form-container">
@@ -425,12 +393,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($errorMessages)) {
             placeholder="Enter your complete address"
             required
           ><?php echo isset($formData['address']) ? htmlspecialchars($formData['address']) : ''; ?></textarea>
-
-          <!-- Terms and Conditions -->
-          <div class="checkbox-group">
-            <input type="checkbox" id="terms" name="terms" required />
-            <label for="terms">I agree to the Terms & Conditions</label>
-          </div>
 
           <!-- Submit Button -->
           <button type="submit" class="submit-btn">Submit</button>
