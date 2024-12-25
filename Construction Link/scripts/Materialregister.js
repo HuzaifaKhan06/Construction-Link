@@ -1,8 +1,6 @@
-
 const openFormBtn = document.getElementById("openFormBtn");
 const closeFormBtn = document.getElementById("closeFormBtn");
 const registrationForm = document.getElementById("registrationForm");
-
 
 const fileInput = document.getElementById("companyLogo");
 const previewImg = document.getElementById("previewImg");
@@ -13,9 +11,9 @@ openFormBtn.addEventListener("click", () => {
 
 closeFormBtn.addEventListener("click", () => {
   registrationForm.classList.remove("active");
-  // You can keep this if you want the form to be manually closed by the user
-  // previewImg.src = "";
-  // fileInput.value = "";
+  // Optionally reset the image preview and file input
+  previewImg.src = "";
+  fileInput.value = "";
 });
 
 fileInput.addEventListener("change", (event) => {
