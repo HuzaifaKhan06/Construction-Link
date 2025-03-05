@@ -1,299 +1,297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>2D and 3D House Modeling</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            display: flex;
-            height: 100vh;
-            background-color: #f4f4f4;
-            overflow: hidden; /* Prevent scrolling when overlay is active */
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D and 3D House Modeling</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      background-color: #f4f4f4;
+      overflow: hidden;
+    }
 
-        /* Content Wrapper */
-        #content {
-            display: flex;
-            flex: 1;
-            transition: filter 0.3s ease;
-        }
+    #content {
+      display: flex;
+      flex: 1;
+      transition: filter 0.3s ease;
+    }
 
-        .sidebar {
-            width: 200px;
-            background-color: #2C3E50;
-            padding: 20px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .sidebar {
+      width: 200px;
+      background-color: #2C3E50;
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        .sidebar img {
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-        }
+    .sidebar img {
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+    }
 
-        .sidebar input, .sidebar button, .sidebar select {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 14px;
-        }
+    .sidebar input, .sidebar button, .sidebar select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
 
-        .sidebar input {
-            background-color: #ecf0f1;
-            color: #2C3E50;
-        }
+    .sidebar input {
+      background-color: #ecf0f1;
+      color: #2C3E50;
+    }
 
-        .sidebar button {
-            background-color: #e67e22;
-            color: white;
-            cursor: pointer;
-        }
+    .sidebar button {
+      background-color: #e67e22;
+      color: white;
+      cursor: pointer;
+    }
+    .sidebar button:hover {
+      background-color: #d35400;
+    }
+    .sidebar button.selected {
+      background-color: #2980B9;
+    }
 
-        .sidebar button:hover {
-            background-color: #d35400;
-        }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .canvas-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    #2d-canvas {
+      width: 100%;
+      height: 50%;
+      background-color: white;
+      border-bottom: 2px solid #ecf0f1;
+    }
+    #threejs-canvas {
+      width: 100%;
+      height: 50%;
+      background-color: white;
+    }
 
-        .sidebar button.selected { /* New CSS for selected buttons */
-            background-color: #2980B9;
-        }
+    .extra-buttons {
+      display: flex; 
+      flex-direction: column;
+      margin-top: 8px;
+    }
+    .delete-button {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      z-index: 1000;
+    }
+    .endpoint {
+      width: 10px;
+      height: 10px;
+      background-color: blue;
+      border-radius: 50%;
+      position: absolute;
+      display: none;
+      z-index: 1000;
+    }
+    .three-dots-button {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-color: #666;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+      font-size: 18px;
+      line-height: 0.9;
+      z-index: 1000;
+    }
 
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+    /* Small form for editing length */
+    #lengthForm {
+      position: absolute;
+      display: none;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      width: 150px;
+      z-index: 999;
+    }
+    #lengthForm label {
+      font-size: 12px;
+      margin-right: 5px;
+    }
+    #lengthForm input, #lengthForm select {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+    #lengthForm button {
+      background-color: #e67e22;
+      color: white;
+      cursor: pointer;
+      border: none;
+      border-radius: 3px;
+      width: 100%;
+      padding: 5px;
+    }
+    #lengthForm button:hover {
+      background-color: #d35400;
+    }
 
-        .canvas-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+    /* Custom Alert Modal */
+    #customAlert {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #ffdddd;
+      color: #a94442;
+      padding: 15px 20px;
+      border: 1px solid #a94442;
+      border-radius: 5px;
+      display: none;
+      z-index: 1001;
+      min-width: 300px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    #customAlert .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #a94442;
+    }
+    #customAlert p {
+      margin: 0;
+      padding-right: 20px;
+    }
 
-        #2d-canvas {
-            width: 100%;
-            height: 50%;
-            background-color: white;
-            border-bottom: 2px solid #ecf0f1;
-        }
-
-        #threejs-canvas {
-            width: 100%;
-            height: 50%;
-            background-color: white;
-        }
-
-        /* Additional styling for buttons and elements */
-        .extra-buttons {
-            display: flex; 
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .delete-button {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: red;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none; /* Initially hidden */
-            z-index: 1000;
-        }
-        .endpoint {
-            width: 10px;
-            height: 10px;
-            background-color: blue;
-            border-radius: 50%;
-            position: absolute;
-            display: none; /* Initially hidden */
-            z-index: 1000;
-        }
-
-        /* Three-dots button styling */
-        .three-dots-button {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-color: #666;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            display: none; /* Initially hidden */
-            font-size: 18px;
-            line-height: 0.9;
-            z-index: 1000;
-        }
-
-        /* Small form for editing length */
-        #lengthForm {
-            position: absolute;
-            display: none; /* hidden by default */
-            background-color: #fff;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            width: 150px;
-            z-index: 999; /* ensure it's on top */
-        }
-        #lengthForm label {
-            font-size: 12px;
-            margin-right: 5px;
-        }
-        #lengthForm input, #lengthForm select {
-            width: 100%;
-            margin-bottom: 8px;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-        #lengthForm button {
-            background-color: #e67e22;
-            color: white;
-            cursor: pointer;
-            border: none;
-            border-radius: 3px;
-            width: 100%;
-            padding: 5px;
-        }
-        #lengthForm button:hover {
-            background-color: #d35400;
-        }
-
-        /* Custom Alert Modal */
-        #customAlert {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #ffdddd;
-            color: #a94442;
-            padding: 15px 20px;
-            border: 1px solid #a94442;
-            border-radius: 5px;
-            display: none; /* Hidden by default */
-            z-index: 1001;
-            min-width: 300px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        #customAlert .close-btn {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            color: #a94442;
-        }
-
-        #customAlert p {
-            margin: 0;
-            padding-right: 20px;
-        }
-
-        /* Loading Overlay */
-        #loadingOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: none; /* Hidden by default */
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            /* Removed backdrop-filter to prevent spinner from being blurred */
-            /* backdrop-filter: blur(5px); */
-        }
-
-        #loadingOverlay img {
-            width: 100px;
-            height: 100px;
-        }
-    </style>
+    /* Loading Overlay */
+    #loadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    #loadingOverlay img {
+      width: 100px;
+      height: 100px;
+    }
+  </style>
 </head>
 <body>
-    <!-- Content Wrapper -->
-    <div id="content">
-        <div class="sidebar">
-            <img src="imgs/LogoL.webp" alt="Logo">
+  <div id="content">
+    <div class="sidebar">
+      <img src="imgs/LogoL.webp" alt="Logo" />
 
-            <!-- Input for wall height -->
-            <input type="number" id="wallHeight" placeholder="Height" min="0" />
+      <!-- Input for wall height -->
+      <input type="number" id="wallHeight" placeholder="Height" min="0" />
+      <select id="heightUnit">
+        <option value="m">Meter</option>
+        <option value="ft">Foot</option>
+      </select>
 
-            <select id="heightUnit">
-                <option value="m">Meter</option>
-                <option value="ft">Foot</option>
-            </select>
+      <!-- Select for wall thickness -->
+      <select id="wallWidth">
+        <option value="4in_brick" data-wall-type="brick">04 Inch Brick Wall</option>
+        <option value="9in_brick" data-wall-type="brick">09 Inch Brick Wall</option>
+        <option value="13in_brick" data-wall-type="brick">13 Inch Brick Wall</option>
+        <option value="18in_brick" data-wall-type="brick">18 Inch Brick Wall</option>
+        <option value="8in_block" data-wall-type="block">08 Inch Block Wall</option>
+        <option value="18in_block" data-wall-type="block">18 Inch Block Wall</option>
+        <option value="27in_block" data-wall-type="block">27 Inch Block Wall</option>
+      </select>
 
-            <!-- Select for wall thickness -->
-            <select id="wallWidth">
-                <option value="4in_brick" data-wall-type="brick">04 Inch Brick Wall</option>
-                <option value="9in_brick" data-wall-type="brick">09 Inch Brick Wall</option>
-                <option value="13in_brick" data-wall-type="brick">13 Inch Brick Wall</option>
-                <option value="18in_brick" data-wall-type="brick">18 Inch Brick Wall</option>
-                <option value="8in_block" data-wall-type="block">08 Inch Block Wall</option>
-                <option value="18in_block" data-wall-type="block">18 Inch Block Wall</option>
-                <option value="27in_block" data-wall-type="block">27 Inch Block Wall</option>
-            </select>
+      <!-- Select for wall base -->
+      <select id="baseWidth">
+        <option value="4in_brick" data-wall-type="brick">04 Inch Brick Base</option>
+        <option value="9in_brick" data-wall-type="brick">09 Inch Brick Base</option>
+        <option value="13in_brick" data-wall-type="brick">13 Inch Brick Base</option>
+        <option value="18in_brick" data-wall-type="brick">18 Inch Brick Base</option>
+        <option value="8in_block" data-wall-type="block">08 Inch Block Base</option>
+        <option value="18in_block" data-wall-type="block">18 Inch Block Base</option>
+        <option value="27in_block" data-wall-type="block">27 Inch Block Base</option>
+      </select>
 
-            <!-- Buttons for adding roof and wall types -->
-            <button id="addRoof">Add Roof</button>
+      <input type="number" id="baseDepth" placeholder="Depth" min="0" />
+      <select id="depthUnit">
+        <option value="m">Meter</option>
+        <option value="ft">Foot</option>
+      </select>
 
-            <div class="extra-buttons">
-                <button id="brickWall">Brick Wall</button>
-                <button id="blockWall">Block Wall</button>
-                <button id="updateWalls">Update Walls</button>
-                <button id="estimateMaterials">Estimate Materials</button>
-            </div>
-        </div>
-
-        <div class="main">
-            <div class="canvas-container">
-                <canvas id="2d-canvas"></canvas>
-                <div id="threejs-canvas"></div>
-            </div>
-        </div>
+      <!-- Buttons -->
+      <button id="addRoof">Add Roof</button>
+      <div class="extra-buttons">
+        <button id="brickWall">Brick Wall</button>
+        <button id="blockWall">Block Wall</button>
+        <button id="updateWalls">Update Walls</button>
+        <button id="estimateMaterials">Estimate Materials</button>
+      </div>
     </div>
 
-    <!-- Hidden form for editing length -->
-    <div id="lengthForm">
-        <label for="lengthValue">Length:</label>
-        <input type="number" id="lengthValue" placeholder="0" min="0" />
-        <select id="lengthUnit">
-            <option value="m">Meter</option>
-            <option value="ft">Foot</option>
-        </select>
-        <button id="setLengthBtn">Set Length</button>
+    <div class="main">
+      <div class="canvas-container">
+        <canvas id="2d-canvas"></canvas>
+        <div id="threejs-canvas"></div>
+      </div>
     </div>
+  </div>
 
-    <!-- Custom Alert Modal -->
-    <div id="customAlert">
-        <button class="close-btn">&times;</button>
-        <p id="alertMessage">This is an alert message.</p>
-    </div>
+  <!-- Hidden form for editing length -->
+  <div id="lengthForm">
+    <label for="lengthValue">Length:</label>
+    <input type="number" id="lengthValue" placeholder="0" min="0" />
+    <select id="lengthUnit">
+      <option value="m">Meter</option>
+      <option value="ft">Foot</option>
+    </select>
+    <button id="setLengthBtn">Set Length</button>
+  </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay">
-        <img src="imgs/loading-spinner.gif" alt="Loading..." />
-    </div>
+  <!-- Custom Alert Modal -->
+  <div id="customAlert">
+    <button class="close-btn">&times;</button>
+    <p id="alertMessage">This is an alert message.</p>
+  </div>
 
-    <script type="module" src="./scripts/2d-drawing.js"></script>
-    <script type="module" src="./scripts/3d-rendering.js"></script>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay">
+    <img src="imgs/loading-spinner.gif" alt="Loading..." />
+  </div>
+
+  <script type="module" src="./scripts/2d-drawing.js"></script>
+  <script type="module" src="./scripts/3d-rendering.js"></script>
 </body>
 </html>

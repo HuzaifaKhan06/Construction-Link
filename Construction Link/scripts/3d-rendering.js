@@ -3,175 +3,182 @@
 import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
 
-// Same 20 px = 1 meter as in 2D
 const PIXELS_PER_METER = 20;
-
 const scene = new THREE.Scene();
+
+// Camera
 const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / (window.innerHeight / 2),
-    0.1,
-    2000
+  75,
+  window.innerWidth / (window.innerHeight / 2),
+  0.1,
+  2000
 );
 camera.position.set(0, 15, 50);
 camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight / 2);
 document.getElementById('threejs-canvas').appendChild(renderer.domElement);
 
+// Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 controls.enableZoom = true;
 
-const walls = [];
-const wallMeshes = [];
+// Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambientLight);
 
-// Auto-adjust camera
-function adjustCameraToFitObject(object) {
-    const boundingBox = new THREE.Box3().setFromObject(object);
-    const center = boundingBox.getCenter(new THREE.Vector3());
-    const size = boundingBox.getSize(new THREE.Vector3());
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(10, 20, 10);
+scene.add(dirLight);
 
+// Keep track of all wall/base meshes
+const allMeshes = [];
+
+/**
+ * Auto-adjust the camera so we can see everything (walls + base).
+ */
+function adjustCameraToFitScene() {
+  const box = new THREE.Box3().setFromObject(scene);
+  if (!box.isEmpty()) {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
+
     const fov = camera.fov * (Math.PI / 180);
     let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+    cameraZ *= 1.4; // a bit further out
 
-    cameraZ *= 1.5;
-    camera.position.set(center.x, center.y + cameraZ / 3, cameraZ);
+    camera.position.set(center.x + cameraZ / 3, center.y + cameraZ / 3, cameraZ);
     camera.lookAt(center);
     controls.target.copy(center);
     controls.update();
+  }
 }
 
-// Use the thickness passed directly
+/**
+ * Read the user-chosen wall height from the sidebar.
+ */
 function getWallHeight() {
-    const hVal = parseFloat(document.getElementById('wallHeight').value) || 10;
-    const hUnit = document.getElementById('heightUnit').value;
-    return (hUnit === 'ft') ? (hVal * 0.3048) : hVal;
+  const val = parseFloat(document.getElementById('wallHeight').value) || 10;
+  const unit = document.getElementById('heightUnit').value;
+  return (unit === 'ft') ? (val * 0.3048) : val;
 }
 
-function createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness) {
-    // Pixel distance in 2D
-    const lengthPx = Math.hypot(x2 - x1, y2 - y1);
-    // Convert to meters
-    const lengthM = lengthPx / PIXELS_PER_METER;
+/**
+ * Create a 3D wall + base exactly as requested:
+ * - The wall's bottom is at y=0, top at y=wallHeight.
+ * - The base extends downward from y=0 to y=-baseDepth.
+ * - The base length = same as the wall length,
+ *   the base "thickness" = baseWidth from the dropdown,
+ *   and the "height" of the base in 3D is baseDepth from the text box.
+ */
+function createWall3D(wall) {
+  // 1) Convert 2D (canvas) to 3D coords
+  const wallHeight = getWallHeight();
+  const midX = (wall.x1 + wall.x2) / 2;
+  const midY = (wall.y1 + wall.y2) / 2;
+  const posX = midX / PIXELS_PER_METER;
+  const posZ = -midY / PIXELS_PER_METER;
 
-    // Retrieve height in meters
-    const height = getWallHeight();
+  // The wall angle
+  const angle = -Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
 
-    // Load texture
-    const textureLoader = new THREE.TextureLoader();
-    const wallTexture = textureLoader.load(texture);
+  // The 2D length in meters, thickness, baseDepth, baseThickness
+  const wallLength = wall.lengthMeter;
+  const wallThickness = wall.thickness;
+  const baseDepth = wall.baseDepth;        // vertical dimension in 3D
+  const baseThickness = wall.baseThickness; // dimension in Z direction for the base
 
-    // Create geometry
-    const wallGeometry = new THREE.BoxGeometry(lengthM, height, thickness);
-    const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+  // 2) Create the base (if baseDepth > 0 and baseThickness > 0)
+  if (baseDepth > 0 && baseThickness > 0) {
+    // Always use the same texture for the base: "WallBaseTexture.png"
+    // or pick your own logic if you want separate brick/block base textures
+    const baseTexture = new THREE.TextureLoader().load('./imgs/WallBaseTexture.png');
+    const baseMaterial = new THREE.MeshStandardMaterial({ map: baseTexture });
 
-    // Position in 3D
-    wall.position.set(
-        ((x1 + x2) / 2 - canvasWidth / 4) / PIXELS_PER_METER,
-        height / 2,
-        -((y1 + y2) / 2 - canvasHeight / 2) / PIXELS_PER_METER
+    // BoxGeometry(width, height, depth)
+    // We'll interpret: width = wallLength, height = baseDepth, depth = baseThickness
+    const baseGeometry = new THREE.BoxGeometry(
+      wallLength,
+      baseDepth,
+      baseThickness
     );
+    const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
 
-    // Rotate around Y
-    wall.rotation.y = Math.atan2(y2 - y1, x2 - x1);
+    // The base extends downward from y=0 => center is at y = -baseDepth/2
+    baseMesh.position.set(posX, -baseDepth / 2, posZ);
+    baseMesh.rotation.y = angle;
+    scene.add(baseMesh);
+    allMeshes.push(baseMesh);
+  }
 
-    scene.add(wall);
-    walls.push({ x1, y1, x2, y2, texture, thickness: thickness });
-    wallMeshes.push(wall);
+  // 3) Create the wall above the base
+  // The wall extends from y=0 to y=wallHeight => center at y=wallHeight/2
+  let wallTexture;
+  if (wall.wallType === 'brick') {
+    wallTexture = new THREE.TextureLoader().load('./imgs/brick_texture.jpg');
+  } else if (wall.wallType === 'block') {
+    wallTexture = new THREE.TextureLoader().load('./imgs/block_texture.jpg');
+  }
 
-    adjustCameraToFitObject(scene);
+  const wallGeometry = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
+  const wallMaterial = wallTexture
+    ? new THREE.MeshStandardMaterial({ map: wallTexture })
+    : new THREE.MeshStandardMaterial({ color: 0xffffff });
+
+  const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+  wallMesh.position.set(posX, wallHeight / 2, posZ);
+  wallMesh.rotation.y = angle;
+  scene.add(wallMesh);
+  allMeshes.push(wallMesh);
 }
 
-// Listen for "add-wall" from 2D
+/**
+ * When a single new wall is added from 2D:
+ */
 window.addEventListener('add-wall', (evt) => {
-    const { x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness } = evt.detail;
-    createWall(x1, y1, x2, y2, canvasWidth, canvasHeight, texture, thickness);
+  createWall3D(evt.detail);
+  adjustCameraToFitScene();
 });
 
-// Listen for "update-all-walls"
+/**
+ * When we update/rebuild all walls from 2D:
+ */
 window.addEventListener('update-all-walls', (evt) => {
-    const { walls: wallData, canvasWidth, canvasHeight } = evt.detail;
+  const { walls } = evt.detail;
 
-    // Remove existing
-    wallMeshes.forEach(mesh => {
-        scene.remove(mesh);
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-    });
-    wallMeshes.length = 0;
+  // Remove old
+  allMeshes.forEach(mesh => {
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  });
+  allMeshes.length = 0;
 
-    // Recreate all
-    wallData.forEach(w => {
-        createWall(w.x1, w.y1, w.x2, w.y2, canvasWidth, canvasHeight, w.texture, w.thickness);
-    });
+  // Create new
+  walls.forEach(w => createWall3D(w));
+  adjustCameraToFitScene();
 });
 
-// Light
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(10, 10, 10).normalize();
-scene.add(light);
-
-// Roof creation
-function createRoof(canvasWidth, canvasHeight) {
-    if (walls.length < 2) {
-        console.warn('Not enough walls to create a roof');
-        return;
-    }
-    const minX = Math.min(...walls.map(w => Math.min(w.x1, w.x2)));
-    const maxX = Math.max(...walls.map(w => Math.max(w.x1, w.x2)));
-    const minY = Math.min(...walls.map(w => Math.min(w.y1, w.y2)));
-    const maxY = Math.max(...walls.map(w => Math.max(w.y1, w.y2)));
-
-    const widthM = (maxX - minX + 2) / PIXELS_PER_METER;
-    const depthM = (maxY - minY + 2) / PIXELS_PER_METER;
-    const wallHeight = getWallHeight();
-
-    const textureLoader = new THREE.TextureLoader();
-    const roofTexture = textureLoader.load('./imgs/roof_texture.jpg');
-
-    // Flat roof
-    const roofGeometry = new THREE.BoxGeometry(widthM, 0.2, depthM);
-    const roofMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
-    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-
-    const midX = (minX + maxX) / 2 - canvasWidth / 4;
-    const midY = (minY + maxY) / 2 - canvasHeight / 2;
-
-    roof.position.set(
-        midX / PIXELS_PER_METER,
-        wallHeight + 0.1,
-        -midY / PIXELS_PER_METER
-    );
-
-    // Optional peaked roof
-    const peakHeight = 1;
-    const roofPeakGeometry = new THREE.ConeGeometry(widthM / 2, peakHeight, 4);
-    const roofPeakMaterial = new THREE.MeshBasicMaterial({ map: roofTexture, side: THREE.DoubleSide });
-    const roofPeak = new THREE.Mesh(roofPeakGeometry, roofPeakMaterial);
-    roofPeak.position.set(roof.position.x, wallHeight + peakHeight, roof.position.z);
-    roofPeak.rotation.y = Math.PI / 4;
-
-    scene.add(roof);
-    scene.add(roofPeak);
-
-    adjustCameraToFitObject(scene);
+/**
+ * Roof creation placeholder
+ */
+function createRoof() {
+  console.warn('Add your roof logic here if needed.');
 }
-
 document.getElementById('addRoof').addEventListener('click', () => {
-    const canvasWidth = window.innerWidth;
-    const canvasHeight = window.innerHeight / 2;
-    createRoof(canvasWidth, canvasHeight);
+  createRoof();
 });
 
-// Animate
+/**
+ * Render loop
+ */
 function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
 animate();
