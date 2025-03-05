@@ -120,7 +120,7 @@ function getWallThicknessInMeters() {
   }
 }
 
-// Which base type? We'll store it, though we always use WallBaseTexture.png in 3D
+// Which base type?
 function getBaseType() {
   const option = baseWidthSelect.options[baseWidthSelect.selectedIndex];
   return option.dataset.wallType; // 'brick' or 'block'
@@ -156,30 +156,17 @@ drawGrid();
 
 let hoveredWall = null;
 
+/**
+ * IMPORTANT CHANGE:
+ * If a wall type is selected (brick or block), we ALWAYS start drawing a new wall.
+ * Otherwise, we check if we clicked an existing wall for selection/dragging.
+ */
 canvas.addEventListener('mousedown', (e) => {
   const { x, y } = getMousePos(e);
   lengthForm.style.display = 'none';
 
-  const clickedWall = walls.find(w => isPointOnLine(x, y, w));
-  if (clickedWall) {
-    if (selectedWall) {
-      selectedWall.highlighted = false;
-    }
-    clickedWall.highlighted = true;
-    selectedWall = clickedWall;
-    isDragging = true;
-
-    const midX = (clickedWall.x1 + clickedWall.x2) / 2;
-    const midY = (clickedWall.y1 + clickedWall.y2) / 2;
-    showDeleteButton(midX, midY);
-    showThreeDotsButton(midX, midY);
-    showEndpoints(clickedWall);
-  } else {
-    // Starting a new wall
-    if (!currentWallType) {
-      showCustomAlert('Please select Brick Wall or Block Wall first.');
-      return;
-    }
+  if (currentWallType) {
+    // We are in "draw mode" => always start a new wall
     const wh = getWallHeightInMeters();
     if (wh <= 0) {
       showCustomAlert('Wall height must be > 0.');
@@ -195,6 +182,26 @@ canvas.addEventListener('mousedown', (e) => {
       selectedWall.highlighted = false;
       selectedWall = null;
       redraw();
+    }
+  } else {
+    // No wall type selected => check if we clicked on an existing wall
+    const clickedWall = walls.find(w => isPointOnLine(x, y, w));
+    if (clickedWall) {
+      if (selectedWall) {
+        selectedWall.highlighted = false;
+      }
+      clickedWall.highlighted = true;
+      selectedWall = clickedWall;
+      isDragging = true;
+
+      const midX = (clickedWall.x1 + clickedWall.x2) / 2;
+      const midY = (clickedWall.y1 + clickedWall.y2) / 2;
+      showDeleteButton(midX, midY);
+      showThreeDotsButton(midX, midY);
+      showEndpoints(clickedWall);
+    } else {
+      // Clicked empty space but no wall type selected => prompt user
+      showCustomAlert('Please select Brick Wall or Block Wall first.');
     }
   }
 });
@@ -479,8 +486,12 @@ function drawDynamicLength(x1, y1, x2, y2, length, unit) {
   ctx.fillText(`${length} ${unit}`, midX, midY - 10);
 }
 
+/**
+ * If the distance from (px,py) to the line is less than some tolerance, we consider it "on" the line.
+ * You can adjust tolerance if needed.
+ */
 function isPointOnLine(px, py, w) {
-  const tolerance = 5;
+  const tolerance = 5; // Lower if you want even more precision
   const dist = Math.abs(
     (w.y2 - w.y1) * px -
     (w.x2 - w.x1) * py +

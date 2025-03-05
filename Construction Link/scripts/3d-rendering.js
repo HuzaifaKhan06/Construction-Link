@@ -69,11 +69,6 @@ function getWallHeight() {
 
 /**
  * Create a 3D wall + base exactly as requested:
- * - The wall's bottom is at y=0, top at y=wallHeight.
- * - The base extends downward from y=0 to y=-baseDepth.
- * - The base length = same as the wall length,
- *   the base "thickness" = baseWidth from the dropdown,
- *   and the "height" of the base in 3D is baseDepth from the text box.
  */
 function createWall3D(wall) {
   // 1) Convert 2D (canvas) to 3D coords
@@ -94,13 +89,11 @@ function createWall3D(wall) {
 
   // 2) Create the base (if baseDepth > 0 and baseThickness > 0)
   if (baseDepth > 0 && baseThickness > 0) {
-    // Always use the same texture for the base: "WallBaseTexture.png"
-    // or pick your own logic if you want separate brick/block base textures
+    // Use a generic base texture
     const baseTexture = new THREE.TextureLoader().load('./imgs/WallBaseTexture.png');
     const baseMaterial = new THREE.MeshStandardMaterial({ map: baseTexture });
 
     // BoxGeometry(width, height, depth)
-    // We'll interpret: width = wallLength, height = baseDepth, depth = baseThickness
     const baseGeometry = new THREE.BoxGeometry(
       wallLength,
       baseDepth,
@@ -116,7 +109,6 @@ function createWall3D(wall) {
   }
 
   // 3) Create the wall above the base
-  // The wall extends from y=0 to y=wallHeight => center at y=wallHeight/2
   let wallTexture;
   if (wall.wallType === 'brick') {
     wallTexture = new THREE.TextureLoader().load('./imgs/brick_texture.jpg');
