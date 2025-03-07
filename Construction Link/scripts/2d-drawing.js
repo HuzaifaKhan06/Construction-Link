@@ -21,6 +21,37 @@ let currentWallType = null; // 'brick' or 'block'
 let resizing = false;
 let resizingPoint = null;
 
+// Undo stack: each entry is a deep copy of walls array.
+let undoStack = [];
+
+// Push the current state onto the undo stack
+function pushState() {
+  const stateCopy = JSON.parse(JSON.stringify(walls));
+  undoStack.push(stateCopy);
+}
+
+// Undo function: revert walls to previous state
+function undo() {
+  // Ensure at least one state remains (initial state)
+  if (undoStack.length > 1) {
+    undoStack.pop(); // Remove current state
+    walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
+    redraw();
+    updateAllWalls();
+  }
+}
+
+// Initialize with an empty state.
+pushState();
+
+// Listen for ctrl+z (or cmd+z on mac)
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    undo();
+  }
+});
+
 // Delete button
 const deleteButton = document.createElement('button');
 deleteButton.className = 'delete-button';
@@ -166,7 +197,7 @@ canvas.addEventListener('mousedown', (e) => {
   lengthForm.style.display = 'none';
 
   if (currentWallType) {
-    // We are in "draw mode" => always start a new wall
+    // Draw mode: always start a new wall.
     const wh = getWallHeightInMeters();
     if (wh <= 0) {
       showCustomAlert('Wall height must be > 0.');
@@ -184,7 +215,7 @@ canvas.addEventListener('mousedown', (e) => {
       redraw();
     }
   } else {
-    // No wall type selected => check if we clicked on an existing wall
+    // No wall type selected: try to select an existing wall.
     const clickedWall = walls.find(w => isPointOnLine(x, y, w));
     if (clickedWall) {
       if (selectedWall) {
@@ -200,7 +231,6 @@ canvas.addEventListener('mousedown', (e) => {
       showThreeDotsButton(midX, midY);
       showEndpoints(clickedWall);
     } else {
-      // Clicked empty space but no wall type selected => prompt user
       showCustomAlert('Please select Brick Wall or Block Wall first.');
     }
   }
@@ -318,6 +348,10 @@ canvas.addEventListener('mouseup', (e) => {
     walls.push(newWall);
     add3DWall(newWall);
     redraw();
+    pushState(); // Save state after drawing a new wall.
+  } else if (isDragging) {
+    // End of drag: save state if any wall has moved.
+    pushState();
   }
   isDragging = false;
   resizing = false;
@@ -353,6 +387,7 @@ deleteButton.addEventListener('click', () => {
     endpoint1.style.display = 'none';
     endpoint2.style.display = 'none';
     threeDotsButton.style.display = 'none';
+    pushState(); // Save state after deletion.
   }
   deleteButton.style.display = 'none';
 });
@@ -411,6 +446,7 @@ setLengthBtn.addEventListener('click', () => {
 
   redraw();
   updateAllWalls();
+  pushState(); // Save state after editing a wall.
   lengthForm.style.display = 'none';
 });
 
@@ -488,10 +524,9 @@ function drawDynamicLength(x1, y1, x2, y2, length, unit) {
 
 /**
  * If the distance from (px,py) to the line is less than some tolerance, we consider it "on" the line.
- * You can adjust tolerance if needed.
  */
 function isPointOnLine(px, py, w) {
-  const tolerance = 5; // Lower if you want even more precision
+  const tolerance = 5; // Adjust for precision if needed.
   const dist = Math.abs(
     (w.y2 - w.y1) * px -
     (w.x2 - w.x1) * py +
@@ -541,7 +576,7 @@ function filterWallWidthOptions(wallType) {
   for (let i = 0; i < options.length; i++) {
     const opt = options[i];
     if (!wallType) {
-      // If no type selected, show all
+      // If no type selected, show all options.
       opt.style.display = 'block';
       if (firstVisibleIndex === -1) firstVisibleIndex = i;
     } else if (opt.dataset.wallType === wallType) {
@@ -579,9 +614,9 @@ function calculateMaterialEstimation() {
     showCustomAlert('Please enter valid wall height & thickness first!');
     return null;
   }
-  // Brick
+  // Brick dimensions
   const brickL = 9 * 0.0254, brickW = 4 * 0.0254, brickH = 3 * 0.0254;
-  // Block
+  // Block dimensions
   const blockL = 18 * 0.0254, blockH_ = 6 * 0.0254, blockW_ = 8 * 0.0254;
 
   let totalBrickVol = 0, totalBlockVol = 0, totalLen = 0;
