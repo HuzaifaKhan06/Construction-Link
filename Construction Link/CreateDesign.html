@@ -29,6 +29,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
+      overflow-y: auto; /* enables scrolling in the sidebar */
     }
 
     .sidebar img {
@@ -62,6 +63,13 @@
     }
     .sidebar button.selected {
       background-color: #2980B9;
+    }
+
+    /* Container for buttons with its own scroll bar */
+    #sidebar-buttons {
+      width: 100%;
+      max-height: 300px; /* adjust as needed */
+      overflow-y: auto;
     }
 
     .main {
@@ -251,13 +259,16 @@
         <option value="ft">Foot</option>
       </select>
 
-      <!-- Buttons -->
-      <button id="addRoof">Add Roof</button>
-      <div class="extra-buttons">
-        <button id="brickWall">Brick Wall</button>
-        <button id="blockWall">Block Wall</button>
-        <button id="updateWalls">Update Walls</button>
-        <button id="estimateMaterials">Estimate Materials</button>
+      <!-- Button container with scroll bar -->
+      <div id="sidebar-buttons">
+        <button id="addRoof">Add Roof</button>
+        <button id="beamColumn">Beam & Column</button>
+        <div class="extra-buttons">
+          <button id="brickWall">Brick Wall</button>
+          <button id="blockWall">Block Wall</button>
+          <button id="updateWalls">Update Walls</button>
+          <button id="estimateMaterials">Estimate Materials</button>
+        </div>
       </div>
     </div>
 

@@ -166,6 +166,81 @@ document.getElementById('addRoof').addEventListener('click', () => {
 });
 
 /**
+ * NEW: Beam & Column functionality
+ * When the "Beam & Column" button is clicked in 2D, an event is dispatched.
+ * The following listener creates beams along each wall and columns at wall endpoints.
+ */
+let beamColumnGroup = new THREE.Group();
+const columnBeamTexture = new THREE.TextureLoader().load('./imgs/ColumnBeemTexture.jpeg');
+
+window.addEventListener('add-beam-column', (evt) => {
+  // Remove old beam/column group if exists
+  if (beamColumnGroup.parent) {
+    scene.remove(beamColumnGroup);
+    beamColumnGroup.traverse((child) => {
+      if (child.isMesh) {
+        child.geometry.dispose();
+        child.material.dispose();
+      }
+    });
+  }
+  beamColumnGroup = new THREE.Group();
+
+  const beamThickness = 0.3; // Beam vertical thickness
+  const beamDepth = 0.3;     // Beam depth (into the wall)
+  const columnRadius = 0.2;
+  const wallHeight = getWallHeight();
+
+  const uniqueEndpoints = [];
+
+  function addUniqueEndpoint(pos) {
+    // Check if pos is close to an existing one (tolerance: 0.1 m)
+    for (let ep of uniqueEndpoints) {
+      if (pos.distanceTo(ep) < 0.1) {
+        return; // already added
+      }
+    }
+    uniqueEndpoints.push(pos);
+  }
+
+  const walls = evt.detail.walls;
+  walls.forEach(wall => {
+    // Convert wall endpoints from 2D canvas to 3D coordinates
+    const pos1 = new THREE.Vector3(wall.x1 / PIXELS_PER_METER, 0, -wall.y1 / PIXELS_PER_METER);
+    const pos2 = new THREE.Vector3(wall.x2 / PIXELS_PER_METER, 0, -wall.y2 / PIXELS_PER_METER);
+    addUniqueEndpoint(pos1);
+    addUniqueEndpoint(pos2);
+
+    // Calculate mid-point and angle for the beam along the wall
+    const midX = (wall.x1 + wall.x2) / 2 / PIXELS_PER_METER;
+    const midZ = -(wall.y1 + wall.y2) / 2 / PIXELS_PER_METER;
+    const angle = -Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
+
+    // Create beam geometry: length equals wall.lengthMeter, with fixed thickness and depth.
+    const beamGeometry = new THREE.BoxGeometry(wall.lengthMeter, beamThickness, beamDepth);
+    const beamMaterial = new THREE.MeshStandardMaterial({ map: columnBeamTexture });
+    const beamMesh = new THREE.Mesh(beamGeometry, beamMaterial);
+    // Position the beam on top of the wall.
+    beamMesh.position.set(midX, wallHeight + beamThickness / 2, midZ);
+    beamMesh.rotation.y = angle;
+    beamColumnGroup.add(beamMesh);
+  });
+
+  // Create columns for each unique endpoint.
+  uniqueEndpoints.forEach(ep => {
+    const columnGeometry = new THREE.CylinderGeometry(columnRadius, columnRadius, wallHeight, 16);
+    const columnMaterial = new THREE.MeshStandardMaterial({ map: columnBeamTexture });
+    const columnMesh = new THREE.Mesh(columnGeometry, columnMaterial);
+    // Position the column so its base is at ground level (y=0)
+    columnMesh.position.set(ep.x, wallHeight / 2, ep.z);
+    beamColumnGroup.add(columnMesh);
+  });
+
+  scene.add(beamColumnGroup);
+  adjustCameraToFitScene();
+});
+
+/**
  * Render loop
  */
 function animate() {

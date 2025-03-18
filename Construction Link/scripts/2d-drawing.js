@@ -661,6 +661,13 @@ function calculateMaterialEstimation() {
   };
 }
 
+// NEW: Beam & Column button event listener
+const beamColumnBtn = document.getElementById('beamColumn');
+beamColumnBtn.addEventListener('click', () => {
+  const event = new CustomEvent('add-beam-column', { detail: { walls } });
+  window.dispatchEvent(event);
+});
+
 // Send newly drawn wall to 3D
 function add3DWall(wall) {
   const ev = new CustomEvent('add-wall', { detail: wall });
