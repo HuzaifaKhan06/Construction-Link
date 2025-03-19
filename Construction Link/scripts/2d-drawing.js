@@ -23,6 +23,7 @@ let resizingPoint = null;
 
 // Global flag for beam & column mode
 let beamColumnActive = false;
+window.beamColumnActive = beamColumnActive; // for 3D references if needed
 
 // Undo stack: each entry is a deep copy of walls array.
 let undoStack = [];
@@ -35,7 +36,6 @@ function pushState() {
 
 // Undo function: revert walls to previous state
 function undo() {
-  // Ensure at least one state remains (initial state)
   if (undoStack.length > 1) {
     undoStack.pop(); // Remove current state
     walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
@@ -190,54 +190,7 @@ drawGrid();
 
 let hoveredWall = null;
 
-/**
- * If a wall type is selected (brick or block), we ALWAYS start drawing a new wall.
- * Otherwise, we check if we clicked an existing wall for selection/dragging.
- */
-canvas.addEventListener('mousedown', (e) => {
-  const { x, y } = getMousePos(e);
-  lengthForm.style.display = 'none';
-
-  if (currentWallType) {
-    // Draw mode: always start a new wall.
-    const wh = getWallHeightInMeters();
-    if (wh <= 0) {
-      showCustomAlert('Wall height must be > 0.');
-      return;
-    }
-
-    drawing = true;
-    currentLine.x1 = x;
-    currentLine.y1 = y;
-    deleteButton.style.display = 'none';
-    threeDotsButton.style.display = 'none';
-    if (selectedWall) {
-      selectedWall.highlighted = false;
-      selectedWall = null;
-      redraw();
-    }
-  } else {
-    // No wall type selected: try to select an existing wall.
-    const clickedWall = walls.find(w => isPointOnLine(x, y, w));
-    if (clickedWall) {
-      if (selectedWall) {
-        selectedWall.highlighted = false;
-      }
-      clickedWall.highlighted = true;
-      selectedWall = clickedWall;
-      isDragging = true;
-
-      const midX = (clickedWall.x1 + clickedWall.x2) / 2;
-      const midY = (clickedWall.y1 + clickedWall.y2) / 2;
-      showDeleteButton(midX, midY);
-      showThreeDotsButton(midX, midY);
-      showEndpoints(clickedWall);
-    } else {
-      showCustomAlert('Please select Brick Wall or Block Wall first.');
-    }
-  }
-});
-
+// Show/hide endpoints, delete button, etc.
 function showEndpoints(wall) {
   endpoint1.style.left = `${wall.x1 + canvas.offsetLeft - 5}px`;
   endpoint1.style.top = `${wall.y1 + canvas.offsetTop - 5}px`;
@@ -259,9 +212,78 @@ function showEndpoints(wall) {
   };
 }
 
+function showDeleteButton(x, y) {
+  deleteButton.style.left = `${x + canvas.offsetLeft - 10}px`;
+  deleteButton.style.top = `${y + canvas.offsetTop - 30}px`;
+  deleteButton.style.display = 'block';
+}
+
+function showThreeDotsButton(x, y) {
+  threeDotsButton.style.left = `${x + canvas.offsetLeft + 10}px`;
+  threeDotsButton.style.top = `${y + canvas.offsetTop - 30}px`;
+  threeDotsButton.style.display = 'block';
+}
+
+// Check if point is on a wall line
+function isPointOnLine(px, py, w) {
+  const tolerance = 5; // Adjust if needed
+  const dist = Math.abs(
+    (w.y2 - w.y1) * px -
+    (w.x2 - w.x1) * py +
+    w.x2 * w.y1 -
+    w.y2 * w.x1
+  ) / Math.sqrt(
+    (w.y2 - w.y1)**2 + (w.x2 - w.x1)**2
+  );
+  return dist < tolerance;
+}
+
+// Mouse events
+canvas.addEventListener('mousedown', (e) => {
+  const { x, y } = getMousePos(e);
+  lengthForm.style.display = 'none';
+
+  if (currentWallType) {
+    // Start a new wall
+    const wh = getWallHeightInMeters();
+    if (wh <= 0) {
+      showCustomAlert('Wall height must be > 0.');
+      return;
+    }
+    drawing = true;
+    currentLine.x1 = x;
+    currentLine.y1 = y;
+    deleteButton.style.display = 'none';
+    threeDotsButton.style.display = 'none';
+    if (selectedWall) {
+      selectedWall.highlighted = false;
+      selectedWall = null;
+      redraw();
+    }
+  } else {
+    // Try to select an existing wall
+    const clickedWall = walls.find(w => isPointOnLine(x, y, w));
+    if (clickedWall) {
+      if (selectedWall) selectedWall.highlighted = false;
+      clickedWall.highlighted = true;
+      selectedWall = clickedWall;
+      isDragging = true;
+
+      const midX = (clickedWall.x1 + clickedWall.x2) / 2;
+      const midY = (clickedWall.y1 + clickedWall.y2) / 2;
+      showDeleteButton(midX, midY);
+      showThreeDotsButton(midX, midY);
+      showEndpoints(clickedWall);
+    } else {
+      showCustomAlert('Please select Brick Wall or Block Wall first.');
+    }
+  }
+});
+
 canvas.addEventListener('mousemove', (e) => {
   const { x, y } = getMousePos(e);
 
+  // Resizing endpoints
   if (resizing && selectedWall) {
     if (resizingPoint === 'start') {
       selectedWall.x1 = x;
@@ -275,16 +297,16 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
 
-  const isHover = walls.some(w => isPointOnLine(x, y, w));
-  canvas.style.cursor = isHover ? 'pointer' : 'crosshair';
+  // Hover check
   const newHovered = walls.find(w => isPointOnLine(x, y, w)) || null;
   if (newHovered !== hoveredWall) {
     hoveredWall = newHovered;
     redraw();
   }
+  canvas.style.cursor = hoveredWall ? 'pointer' : 'crosshair';
 
+  // Dragging a wall
   if (isDragging && selectedWall) {
-    // Drag entire wall
     const midX = (selectedWall.x1 + selectedWall.x2) / 2;
     const midY = (selectedWall.y1 + selectedWall.y2) / 2;
     const dx = x - midX;
@@ -307,27 +329,23 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
 
-  if (!drawing) return;
-
-  // Drawing new line
-  currentLine.x2 = x;
-  currentLine.y2 = y;
-
-  redraw();
-  drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, 'black');
-
-  const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
-  const lengthM = lengthPx / PIXELS_PER_METER;
-  drawDynamicLength(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, lengthM.toFixed(2), 'm');
-});
-
-canvas.addEventListener('mouseup', (e) => {
+  // Drawing a new wall
   if (drawing) {
-    drawing = false;
-    const { x, y } = getMousePos(e);
     currentLine.x2 = x;
     currentLine.y2 = y;
 
+    redraw();
+    drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, 'black');
+
+    const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
+    const lengthM = lengthPx / PIXELS_PER_METER;
+    drawDynamicLength(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, lengthM.toFixed(2), 'm');
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (drawing) {
+    drawing = false;
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
 
@@ -344,16 +362,16 @@ canvas.addEventListener('mouseup', (e) => {
       wallType: currentWallType,
       baseType: getBaseType(),
       displayLength: lengthM,
-      unitType: 'm'
+      unitType: 'm',
+      hasBeamColumn: false // default false until user hits "Beam & Column"
     };
 
     walls.push(newWall);
     add3DWall(newWall);
     redraw();
-    pushState(); // Save state after drawing a new wall.
+    pushState(); // Save after drawing
   } else if (isDragging) {
-    // End of drag: save state if any wall has moved.
-    pushState();
+    pushState(); // Save after drag
   }
   isDragging = false;
   resizing = false;
@@ -363,24 +381,119 @@ document.addEventListener('mouseup', () => {
   resizing = false;
 });
 
-function showDeleteButton(x, y) {
-  deleteButton.style.left = `${x + canvas.offsetLeft - 10}px`;
-  deleteButton.style.top = `${y + canvas.offsetTop - 30}px`;
-  deleteButton.style.display = 'block';
-}
-
-lengthValueInput.addEventListener('input', () => {
-  if (lengthValueInput.value < 0) {
-    lengthValueInput.value = 0;
+// When leaving the canvas, clear the hover
+canvas.addEventListener('mouseleave', () => {
+  canvas.style.cursor = 'default';
+  if (hoveredWall) {
+    hoveredWall = null;
+    redraw();
   }
 });
 
-function showThreeDotsButton(x, y) {
-  threeDotsButton.style.left = `${x + canvas.offsetLeft + 10}px`;
-  threeDotsButton.style.top = `${y + canvas.offsetTop - 30}px`;
-  threeDotsButton.style.display = 'block';
+// Drawing helpers
+function drawGridAndWalls() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawWalls();
 }
 
+function drawLine(x1, y1, x2, y2, color = 'black', thickness = 2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = thickness;
+  ctx.stroke();
+}
+
+function drawWalls() {
+  walls.forEach(w => {
+    const thickPx = w.thickness * PIXELS_PER_METER;
+    drawLine(
+      w.x1, w.y1,
+      w.x2, w.y2,
+      w.highlighted ? 'red' : 'black',
+      thickPx
+    );
+
+    // Show length text
+    drawLengthText(w);
+
+    // If hovered, show wall type text
+    if (w === hoveredWall) {
+      drawWallTypeText(w);
+
+      // If this wall has beam & columns, show them in 2D as a red overlay
+      if (w.hasBeamColumn) {
+        drawBeamColumn2D(w);
+      }
+    }
+  });
+}
+
+function drawBeamColumn2D(wall) {
+  // Draw a red "beam" line over the wall
+  ctx.save();
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(wall.x1, wall.y1);
+  ctx.lineTo(wall.x2, wall.y2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Draw small red squares at endpoints to represent columns
+  ctx.fillStyle = 'red';
+  const size = 6; // square side
+  ctx.fillRect(wall.x1 - size/2, wall.y1 - size/2, size, size);
+  ctx.fillRect(wall.x2 - size/2, wall.y2 - size/2, size, size);
+}
+
+function drawLengthText(w) {
+  const midX = (w.x1 + w.x2) / 2;
+  const midY = (w.y1 + w.y2) / 2;
+  ctx.font = '12px Arial';
+  ctx.fillStyle = 'red';
+
+  const suffix = w.unitType === 'ft' ? ' ft' : ' m';
+  const text = w.displayLength.toFixed(2) + suffix;
+  ctx.fillText(text, midX, midY - 10);
+}
+
+function drawWallTypeText(w) {
+  const midX = (w.x1 + w.x2) / 2;
+  const midY = (w.y1 + w.y2) / 2;
+  ctx.font = '12px Arial';
+  ctx.fillStyle = 'green';
+  const text = (w.wallType === 'brick') ? 'Brick Wall' : 'Block Wall';
+  ctx.fillText(text, midX, midY + 15);
+}
+
+function drawDynamicLength(x1, y1, x2, y2, length, unit) {
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  ctx.font = '12px Arial';
+  ctx.fillStyle = 'blue';
+  ctx.fillText(`${length} ${unit}`, midX, midY - 10);
+}
+
+function drawEnds() {
+  if (!selectedWall) return;
+  ctx.fillStyle = 'blue';
+  const r = 5;
+  ctx.beginPath();
+  ctx.arc(selectedWall.x1, selectedWall.y1, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(selectedWall.x2, selectedWall.y2, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function redraw() {
+  drawGridAndWalls();
+}
+
+// Buttons / events
 deleteButton.addEventListener('click', () => {
   if (selectedWall) {
     walls = walls.filter(w => w !== selectedWall);
@@ -389,7 +502,7 @@ deleteButton.addEventListener('click', () => {
     endpoint1.style.display = 'none';
     endpoint2.style.display = 'none';
     threeDotsButton.style.display = 'none';
-    pushState(); // Save state after deletion.
+    pushState();
   }
   deleteButton.style.display = 'none';
 });
@@ -448,104 +561,14 @@ setLengthBtn.addEventListener('click', () => {
 
   redraw();
   updateAllWalls();
-  pushState(); // Save state after editing a wall.
+  pushState();
   lengthForm.style.display = 'none';
 });
 
-function redraw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid();
-  drawWalls();
-}
-
-function drawLine(x1, y1, x2, y2, color = 'black', thickness = 2) {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = thickness;
-  ctx.stroke();
-}
-
-function drawWalls() {
-  walls.forEach(w => {
-    const thickPx = w.thickness * PIXELS_PER_METER;
-    drawLine(
-      w.x1, w.y1,
-      w.x2, w.y2,
-      w.highlighted ? 'red' : 'black',
-      thickPx
-    );
-    drawLengthText(w);
-
-    if (w === hoveredWall) {
-      drawWallTypeText(w);
-    }
-  });
-}
-
-function drawEnds() {
-  if (!selectedWall) return;
-  ctx.fillStyle = 'blue';
-  const r = 5;
-  ctx.beginPath();
-  ctx.arc(selectedWall.x1, selectedWall.y1, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(selectedWall.x2, selectedWall.y2, r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawLengthText(w) {
-  const midX = (w.x1 + w.x2) / 2;
-  const midY = (w.y1 + w.y2) / 2;
-  ctx.font = '12px Arial';
-  ctx.fillStyle = 'red';
-
-  let suffix = w.unitType === 'ft' ? ' ft' : ' m';
-  let text = w.displayLength.toFixed(2) + suffix;
-  ctx.fillText(text, midX, midY - 10);
-}
-
-function drawWallTypeText(w) {
-  const midX = (w.x1 + w.x2) / 2;
-  const midY = (w.y1 + w.y2) / 2;
-  ctx.font = '12px Arial';
-  ctx.fillStyle = 'green';
-  let text = (w.wallType === 'brick') ? 'Brick Wall' : 'Block Wall';
-  ctx.fillText(text, midX, midY + 15);
-}
-
-function drawDynamicLength(x1, y1, x2, y2, length, unit) {
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  ctx.font = '12px Arial';
-  ctx.fillStyle = 'blue';
-  ctx.fillText(`${length} ${unit}`, midX, midY - 10);
-}
-
-/**
- * If the distance from (px,py) to the line is less than some tolerance, we consider it "on" the line.
- */
-function isPointOnLine(px, py, w) {
-  const tolerance = 5; // Adjust for precision if needed.
-  const dist = Math.abs(
-    (w.y2 - w.y1) * px -
-    (w.x2 - w.x1) * py +
-    w.x2 * w.y1 -
-    w.y2 * w.x1
-  ) / Math.sqrt(
-    (w.y2 - w.y1)**2 + (w.x2 - w.x1)**2
-  );
-  return dist < tolerance;
-}
-
-// Update 3D side
 document.getElementById('updateWalls').addEventListener('click', () => {
   updateAllWalls();
 });
 
-// Brick / Block selection
 document.getElementById('brickWall').addEventListener('click', () => {
   if (currentWallType === 'brick') {
     currentWallType = null;
@@ -570,7 +593,6 @@ document.getElementById('blockWall').addEventListener('click', () => {
   filterWallWidthOptions(currentWallType);
 });
 
-// Filter wall thickness options
 function filterWallWidthOptions(wallType) {
   const options = wallWidthSelect.options;
   let firstVisibleIndex = -1;
@@ -578,7 +600,6 @@ function filterWallWidthOptions(wallType) {
   for (let i = 0; i < options.length; i++) {
     const opt = options[i];
     if (!wallType) {
-      // If no type selected, show all options.
       opt.style.display = 'block';
       if (firstVisibleIndex === -1) firstVisibleIndex = i;
     } else if (opt.dataset.wallType === wallType) {
@@ -663,12 +684,18 @@ function calculateMaterialEstimation() {
   };
 }
 
-// Beam & Column button event listener
+// Beam & Column
 const beamColumnBtn = document.getElementById('beamColumn');
 beamColumnBtn.addEventListener('click', () => {
+  // Mark all walls as having beam/column
+  walls.forEach(w => {
+    w.hasBeamColumn = true;
+  });
   beamColumnActive = true;
+  window.beamColumnActive = true; // for 3D
   const event = new CustomEvent('add-beam-column', { detail: { walls } });
   window.dispatchEvent(event);
+  redraw();
 });
 
 // Send newly drawn wall to 3D
@@ -677,7 +704,7 @@ function add3DWall(wall) {
   window.dispatchEvent(ev);
 }
 
-// Update all walls in 3D and also update beam/column if active
+// Update all walls in 3D
 function updateAllWalls() {
   const ev = new CustomEvent('update-all-walls', { detail: { walls } });
   window.dispatchEvent(ev);
@@ -688,11 +715,3 @@ function updateAllWalls() {
     window.dispatchEvent(ev2);
   }
 }
-
-canvas.addEventListener('mouseleave', () => {
-  canvas.style.cursor = 'default';
-  if (hoveredWall) {
-    hoveredWall = null;
-    redraw();
-  }
-});
