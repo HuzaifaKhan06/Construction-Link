@@ -77,10 +77,11 @@ function createWall3D(wall) {
   const midX = (wall.x1 + wall.x2) / 2;
   const midY = (wall.y1 + wall.y2) / 2;
   const posX = midX / PIXELS_PER_METER;
+  // We negate the Y to convert 2D "down" to 3D "up" in Z:
   const posZ = -midY / PIXELS_PER_METER;
 
-  // Angle of the wall
-  const angle = -Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
+  // *** FIX: remove extra negative sign in the angle ***
+  const angle = Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
 
   // The 2D length in meters
   const wallLength = wall.lengthMeter;
@@ -214,7 +215,8 @@ window.addEventListener('add-beam-column', (evt) => {
     // Midpoint for the beam
     const midX = (wall.x1 + wall.x2) / 2 / PIXELS_PER_METER;
     const midZ = -(wall.y1 + wall.y2) / 2 / PIXELS_PER_METER;
-    const angle = -Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
+    // Use the same angle fix:
+    const angle = Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
 
     const beamThickness = 0.3; // vertical thickness
     const beamDepth = 0.3;     // depth in z
