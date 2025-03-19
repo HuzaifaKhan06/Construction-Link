@@ -21,6 +21,9 @@ let currentWallType = null; // 'brick' or 'block'
 let resizing = false;
 let resizingPoint = null;
 
+// Global flag for beam & column mode
+let beamColumnActive = false;
+
 // Undo stack: each entry is a deep copy of walls array.
 let undoStack = [];
 
@@ -188,7 +191,6 @@ drawGrid();
 let hoveredWall = null;
 
 /**
- * IMPORTANT CHANGE:
  * If a wall type is selected (brick or block), we ALWAYS start drawing a new wall.
  * Otherwise, we check if we clicked an existing wall for selection/dragging.
  */
@@ -661,9 +663,10 @@ function calculateMaterialEstimation() {
   };
 }
 
-// NEW: Beam & Column button event listener
+// Beam & Column button event listener
 const beamColumnBtn = document.getElementById('beamColumn');
 beamColumnBtn.addEventListener('click', () => {
+  beamColumnActive = true;
   const event = new CustomEvent('add-beam-column', { detail: { walls } });
   window.dispatchEvent(event);
 });
@@ -674,10 +677,16 @@ function add3DWall(wall) {
   window.dispatchEvent(ev);
 }
 
-// Update all walls in 3D
+// Update all walls in 3D and also update beam/column if active
 function updateAllWalls() {
   const ev = new CustomEvent('update-all-walls', { detail: { walls } });
   window.dispatchEvent(ev);
+
+  // If beam & column mode is active, recalculate them
+  if (beamColumnActive) {
+    const ev2 = new CustomEvent('add-beam-column', { detail: { walls } });
+    window.dispatchEvent(ev2);
+  }
 }
 
 canvas.addEventListener('mouseleave', () => {
