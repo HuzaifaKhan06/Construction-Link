@@ -39,9 +39,10 @@ function pushState() {
 // Undo function: revert walls to previous state
 function undo() {
   if (undoStack.length > 1) {
-    undoStack.pop(); // Remove current state
+    undoStack.pop(); // remove current
     walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
     window.walls = walls;
+    selectedWall = null; // Clear any stale reference
     redraw();
     updateAllWalls();
   }
@@ -87,7 +88,7 @@ const setLengthBtn = document.getElementById('setLengthBtn');
 // Material Estimation
 const estimateBtn = document.getElementById('estimateMaterials');
 
-// Door/Window Button and Modal elements
+// Door/Window Button and Modal
 const doorWindowBtn = document.getElementById('doorWindowBtn');
 const doorWindowModal = document.getElementById('doorWindowModal');
 const closeDoorWindowModal = document.getElementById('closeDoorWindowModal');
@@ -377,8 +378,8 @@ canvas.addEventListener('mouseup', () => {
       baseType: getBaseType(),
       displayLength: lengthM,
       unitType: 'm',
-      hasBeamColumn: false, // default false
-      openings: [] // For door/window openings
+      hasBeamColumn: false,
+      openings: []
     };
 
     walls.push(newWall);
@@ -465,9 +466,9 @@ function drawBeamColumn2D(wall) {
   ctx.stroke();
   ctx.restore();
 
-  // Draw small red squares at endpoints to represent columns
+  // Draw small red squares at endpoints
   ctx.fillStyle = 'red';
-  const size = 6; // square side
+  const size = 6;
   ctx.fillRect(wall.x1 - size/2, wall.y1 - size/2, size, size);
   ctx.fillRect(wall.x2 - size/2, wall.y2 - size/2, size, size);
 }
@@ -740,7 +741,7 @@ function updateAllWalls() {
   }
 }
 
-// --------------- New Door/Window Logic ---------------
+// ---- New Door/Window Logic ----
 
 // Open door/window modal
 doorWindowBtn.addEventListener('click', () => {
@@ -775,13 +776,11 @@ addOpeningBtn.addEventListener('click', () => {
   const openingWidthM = openingWidthFt * 0.3048;
   const openingHeightM = openingHeightFt * 0.3048;
 
-  // 1) Remove the selected wall from walls
+  // Remove the selected wall
   walls = walls.filter(w => w !== selectedWall);
 
-  // 2) Create a brand new wall object with the same properties, but add the new opening
+  // Create new wall with same data + new opening
   const newWall = JSON.parse(JSON.stringify(selectedWall));
-
-  // Keep same geometry data
   newWall.openings = newWall.openings || [];
   newWall.openings.push({
     type: openingType,
@@ -790,32 +789,27 @@ addOpeningBtn.addEventListener('click', () => {
     location: openingLocation
   });
 
-  // 3) Add new wall to array
+  // Add new wall
   walls.push(newWall);
   window.walls = walls;
 
-  // 4) Force re-draw
+  // Redraw + push state
   redraw();
   updateAllWalls();
   pushState();
 
-  // 5) Hide modal
   doorWindowModal.style.display = 'none';
 });
 
-// 2D visual for opening
+// 2D visual for the opening
 function drawOpening2D(wall, opening) {
   // We'll show a thick blue line segment representing the opening
-  // The opening is horizontally placed depending on location,
-  // and vertically: door at bottom, window centered vertically
   const dx = wall.x2 - wall.x1;
   const dy = wall.y2 - wall.y1;
   const wallLenPx = Math.hypot(dx, dy);
 
-  // ratio in px = opening.width in meters * PIXELS_PER_METER
   const openingWidthPx = opening.width * PIXELS_PER_METER;
 
-  // horizontal start offset
   let startOffset = 0;
   if (opening.location === 'center') {
     startOffset = (wallLenPx - openingWidthPx) / 2;
@@ -823,15 +817,12 @@ function drawOpening2D(wall, opening) {
     startOffset = wallLenPx - openingWidthPx;
   }
 
-  // direction unit vector
   const ux = dx / wallLenPx;
   const uy = dy / wallLenPx;
 
-  // Start point in 2D
   const startX = wall.x1 + ux * startOffset;
   const startY = wall.y1 + uy * startOffset;
 
-  // End point
   const endX = startX + ux * openingWidthPx;
   const endY = startY + uy * openingWidthPx;
 
