@@ -9,6 +9,8 @@ canvas.height = window.innerHeight / 2;
 const PIXELS_PER_METER = 20;
 
 let walls = [];
+window.walls = walls; // Expose walls globally for roof calculations
+
 let drawing = false;
 let currentLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
 let selectedWall = null;
@@ -39,6 +41,7 @@ function undo() {
   if (undoStack.length > 1) {
     undoStack.pop(); // Remove current state
     walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
+    window.walls = walls;
     redraw();
     updateAllWalls();
   }
@@ -83,6 +86,16 @@ const setLengthBtn = document.getElementById('setLengthBtn');
 
 // Material Estimation
 const estimateBtn = document.getElementById('estimateMaterials');
+
+// Door/Window Button and Modal elements
+const doorWindowBtn = document.getElementById('doorWindowBtn');
+const doorWindowModal = document.getElementById('doorWindowModal');
+const closeDoorWindowModal = document.getElementById('closeDoorWindowModal');
+const openingTypeSelect = document.getElementById('openingType');
+const openingWidthInput = document.getElementById('openingWidth');
+const openingHeightInput = document.getElementById('openingHeight');
+const openingLocationSelect = document.getElementById('openingLocation');
+const addOpeningBtn = document.getElementById('addOpeningBtn');
 
 // Sidebar inputs
 const wallHeightInput = document.getElementById('wallHeight');
@@ -349,6 +362,7 @@ canvas.addEventListener('mouseup', () => {
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
 
+    // Create new wall with an empty openings array
     const newWall = {
       x1: currentLine.x1,
       y1: currentLine.y1,
@@ -363,10 +377,12 @@ canvas.addEventListener('mouseup', () => {
       baseType: getBaseType(),
       displayLength: lengthM,
       unitType: 'm',
-      hasBeamColumn: false // default false until user hits "Beam & Column"
+      hasBeamColumn: false, // default false
+      openings: [] // For door/window openings
     };
 
     walls.push(newWall);
+    window.walls = walls;
     add3DWall(newWall);
     redraw();
     pushState(); // Save after drawing
@@ -427,6 +443,13 @@ function drawWalls() {
       if (w.hasBeamColumn) {
         drawBeamColumn2D(w);
       }
+    }
+
+    // Draw door/window openings if any (as a blue line segment)
+    if (w.openings && w.openings.length > 0) {
+      w.openings.forEach(opening => {
+        drawOpening2D(w, opening);
+      });
     }
   });
 }
@@ -497,6 +520,7 @@ function redraw() {
 deleteButton.addEventListener('click', () => {
   if (selectedWall) {
     walls = walls.filter(w => w !== selectedWall);
+    window.walls = walls;
     redraw();
     updateAllWalls();
     endpoint1.style.display = 'none';
@@ -709,9 +733,114 @@ function updateAllWalls() {
   const ev = new CustomEvent('update-all-walls', { detail: { walls } });
   window.dispatchEvent(ev);
 
-  // If beam & column mode is active, recalculate them
+  // If beamColumnActive is true, recalc them
   if (beamColumnActive) {
     const ev2 = new CustomEvent('add-beam-column', { detail: { walls } });
     window.dispatchEvent(ev2);
   }
+}
+
+// --------------- New Door/Window Logic ---------------
+
+// Open door/window modal
+doorWindowBtn.addEventListener('click', () => {
+  if (!selectedWall) {
+    showCustomAlert('Please select a wall first.');
+    return;
+  }
+  doorWindowModal.style.display = 'block';
+});
+
+// Close door/window modal
+closeDoorWindowModal.addEventListener('click', () => {
+  doorWindowModal.style.display = 'none';
+});
+
+// Add door/window opening
+addOpeningBtn.addEventListener('click', () => {
+  if (!selectedWall) return;
+
+  const openingType = openingTypeSelect.value; // 'door' or 'window'
+  const openingWidthFt = parseFloat(openingWidthInput.value);
+  const openingHeightFt = parseFloat(openingHeightInput.value);
+  const openingLocation = openingLocationSelect.value; // left, center, right
+
+  if (isNaN(openingWidthFt) || openingWidthFt <= 0 ||
+      isNaN(openingHeightFt) || openingHeightFt <= 0) {
+    showCustomAlert('Please enter valid dimensions for the opening.');
+    return;
+  }
+
+  // Convert from feet to meters
+  const openingWidthM = openingWidthFt * 0.3048;
+  const openingHeightM = openingHeightFt * 0.3048;
+
+  // 1) Remove the selected wall from walls
+  walls = walls.filter(w => w !== selectedWall);
+
+  // 2) Create a brand new wall object with the same properties, but add the new opening
+  const newWall = JSON.parse(JSON.stringify(selectedWall));
+
+  // Keep same geometry data
+  newWall.openings = newWall.openings || [];
+  newWall.openings.push({
+    type: openingType,
+    width: openingWidthM,
+    height: openingHeightM,
+    location: openingLocation
+  });
+
+  // 3) Add new wall to array
+  walls.push(newWall);
+  window.walls = walls;
+
+  // 4) Force re-draw
+  redraw();
+  updateAllWalls();
+  pushState();
+
+  // 5) Hide modal
+  doorWindowModal.style.display = 'none';
+});
+
+// 2D visual for opening
+function drawOpening2D(wall, opening) {
+  // We'll show a thick blue line segment representing the opening
+  // The opening is horizontally placed depending on location,
+  // and vertically: door at bottom, window centered vertically
+  const dx = wall.x2 - wall.x1;
+  const dy = wall.y2 - wall.y1;
+  const wallLenPx = Math.hypot(dx, dy);
+
+  // ratio in px = opening.width in meters * PIXELS_PER_METER
+  const openingWidthPx = opening.width * PIXELS_PER_METER;
+
+  // horizontal start offset
+  let startOffset = 0;
+  if (opening.location === 'center') {
+    startOffset = (wallLenPx - openingWidthPx) / 2;
+  } else if (opening.location === 'right') {
+    startOffset = wallLenPx - openingWidthPx;
+  }
+
+  // direction unit vector
+  const ux = dx / wallLenPx;
+  const uy = dy / wallLenPx;
+
+  // Start point in 2D
+  const startX = wall.x1 + ux * startOffset;
+  const startY = wall.y1 + uy * startOffset;
+
+  // End point
+  const endX = startX + ux * openingWidthPx;
+  const endY = startY + uy * openingWidthPx;
+
+  ctx.save();
+  ctx.strokeStyle = 'blue';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.restore();
 }
