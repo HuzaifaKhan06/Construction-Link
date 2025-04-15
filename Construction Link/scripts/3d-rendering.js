@@ -2,7 +2,7 @@
 
 import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
-import { Shape, ShapeGeometry, Vector2 } from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+import { CSG } from 'https://unpkg.com/three-csgmesh@1.0.2/build/three-csgmesh.module.js';
 
 const PIXELS_PER_METER = 20;
 const scene = new THREE.Scene();
@@ -35,23 +35,18 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(10, 20, 10);
 scene.add(dirLight);
 
-// Keep track of all wall/base/roof/door/window meshes
+// Keep track of all meshes
 const allMeshes = [];
 
-/**
- * Auto-adjust the camera so we can see everything (walls + base + roof).
- */
 function adjustCameraToFitScene() {
   const box = new THREE.Box3().setFromObject(scene);
   if (!box.isEmpty()) {
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
-
     const fov = camera.fov * (Math.PI / 180);
     let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-    cameraZ *= 1.4; // a bit further out
-
+    cameraZ *= 1.4;
     camera.position.set(center.x + cameraZ / 3, center.y + cameraZ / 3, cameraZ);
     camera.lookAt(center);
     controls.target.copy(center);
@@ -59,151 +54,127 @@ function adjustCameraToFitScene() {
   }
 }
 
-/**
- * Read the user-chosen wall height from the sidebar.
- */
 function getWallHeight() {
   const val = parseFloat(document.getElementById('wallHeight').value) || 10;
   const unit = document.getElementById('heightUnit').value;
   return (unit === 'ft') ? (val * 0.3048) : val;
 }
 
-/**
- * Create a 3D wall + base exactly as requested:
- */
 function createWall3D(wall) {
   const wallHeight = getWallHeight();
 
-  // Convert from 2D canvas coords to 3D
+  // Convert 2D canvas coordinates to 3D
   const midX = (wall.x1 + wall.x2) / 2;
   const midY = (wall.y1 + wall.y2) / 2;
   const posX = midX / PIXELS_PER_METER;
-  // We negate the Y to convert 2D "down" to 3D "up" in Z:
   const posZ = -midY / PIXELS_PER_METER;
 
-  // Angle of wall (in 2D, used for rotation in 3D)
-  const angle = Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
-
-  // The 2D length in meters
+  const angle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
   const wallLength = wall.lengthMeter;
   const wallThickness = wall.thickness;
-  const baseDepth = wall.baseDepth;         // vertical dimension
-  const baseThickness = wall.baseThickness; // thickness in Z direction
+  const baseDepth = wall.baseDepth;
+  const baseThickness = wall.baseThickness;
 
-  // 1) Create the base if needed
+  // Create the base: position it exactly under the wall.
   if (baseDepth > 0 && baseThickness > 0) {
     const baseTexture = new THREE.TextureLoader().load('./imgs/WallBaseTexture.png');
     const baseMaterial = new THREE.MeshStandardMaterial({ map: baseTexture });
-    // box geometry: (width, height, depth)
     const baseGeometry = new THREE.BoxGeometry(wallLength, baseDepth, baseThickness);
-
-    // Center the geometry so bottom is at y=0
     baseGeometry.translate(0, -baseDepth / 2, 0);
-
+    // Shift base so its center in Z is aligned with the wall (subtract half wallThickness)
     const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
-    // Place so top of base is at y=0
-    baseMesh.position.set(posX, 0, posZ);
+    baseMesh.position.set(posX, 0, posZ - wallThickness/2);
     baseMesh.rotation.y = angle;
     scene.add(baseMesh);
     allMeshes.push(baseMesh);
   }
 
-  // 2) Create the wall
+  // Prepare wall material and texture.
   let wallTexture;
   if (wall.wallType === 'brick') {
     wallTexture = new THREE.TextureLoader().load('./imgs/brick_texture.jpg');
   } else if (wall.wallType === 'block') {
     wallTexture = new THREE.TextureLoader().load('./imgs/block_texture.jpg');
   }
-
-  const wallGeometry = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
-  // Shift so bottom is at y=0
-  wallGeometry.translate(0, wallHeight / 2, 0);
-
   const wallMaterial = wallTexture
     ? new THREE.MeshStandardMaterial({ map: wallTexture })
     : new THREE.MeshStandardMaterial({ color: 0xffffff });
 
-  const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
-  wallMesh.position.set(posX, 0, posZ);
+  let wallMesh;
+
+  if (!wall.door && (!wall.windows || wall.windows.length === 0)) {
+    // No cutouts: use simple box.
+    const geometry = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
+    geometry.translate(0, wallHeight / 2, 0);
+    wallMesh = new THREE.Mesh(geometry, wallMaterial);
+  } else {
+    // Use CSG subtraction for real cutouts.
+    // Create the base wall as a box.
+    const wallBoxGeom = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
+    // Translate so that the lower-left-front corner is at (0,0,0)
+    wallBoxGeom.translate(wallLength/2, wallHeight/2, wallThickness/2);
+    const wallBox = new THREE.Mesh(wallBoxGeom, wallMaterial);
+    let csgWall = CSG.fromMesh(wallBox);
+
+    if (wall.door) {
+      const doorWidth = wall.door.width;
+      const doorHeight = wall.door.height;
+      let doorX;
+      switch (wall.door.side) {
+        case 'left': doorX = doorWidth/2; break;
+        case 'center': doorX = wallLength/2; break;
+        case 'right': doorX = wallLength - doorWidth/2; break;
+        default: doorX = wallLength/2;
+      }
+      const doorY = 0; // door bottom on ground
+      // Create door geometry slightly thicker than wall to ensure a full subtraction.
+      const doorGeom = new THREE.BoxGeometry(doorWidth, doorHeight, wallThickness + 0.02);
+      doorGeom.translate(doorX, doorHeight/2, wallThickness/2);
+      const doorMesh = new THREE.Mesh(doorGeom, wallMaterial);
+      const csgDoor = CSG.fromMesh(doorMesh);
+      csgWall = csgWall.subtract(csgDoor);
+    }
+
+    if (wall.windows && wall.windows.length > 0) {
+      wall.windows.forEach(win => {
+        const winWidth = win.width;
+        const winHeight = win.height;
+        let winX;
+        switch (win.position) {
+          case 'left': winX = winWidth/2; break;
+          case 'center': winX = wallLength/2; break;
+          case 'right': winX = wallLength - winWidth/2; break;
+          default: winX = wallLength/2;
+        }
+        // Position window so that its bottom is at about 50% of wall height.
+        const winY = wallHeight * 0.5;
+        const winGeom = new THREE.BoxGeometry(winWidth, winHeight, wallThickness + 0.02);
+        winGeom.translate(winX, winY + winHeight/2, wallThickness/2);
+        const winMesh = new THREE.Mesh(winGeom, wallMaterial);
+        const csgWin = CSG.fromMesh(winMesh);
+        csgWall = csgWall.subtract(csgWin);
+      });
+    }
+    // Convert back to mesh.
+    wallMesh = CSG.toMesh(csgWall, wallBox.matrix, wallMaterial);
+    // The CSG operation may lose UV data; for production you might want to regenerate UVs here.
+  }
+
+  // Position and rotate the wall.
+  wallMesh.position.x += posX - wallLength/2;
+  wallMesh.position.z += posZ;
   wallMesh.rotation.y = angle;
   scene.add(wallMesh);
   allMeshes.push(wallMesh);
-
-  // 3) Add door if exists
-  if (wall.door) {
-    // For door, determine horizontal offset along wall.
-    // left => fraction 0.25, right => 0.75.
-    const fraction = (wall.door.side === 'left') ? 0.25 : 0.75;
-    // Compute local door center in wall coordinates:
-    const doorCenterLocalX = -wallLength/2 + fraction * wallLength;
-    const doorCenterLocalY = wall.door.height / 2; // door bottom at base (assume door sits on ground)
-    const doorCenterLocalZ = wallThickness/2 + 0.01; // slightly in front
-
-    // Create door plane geometry (width x height)
-    const doorGeometry = new THREE.PlaneGeometry(wall.door.width, wall.door.height);
-    // Load door texture if available
-    const doorTexture = new THREE.TextureLoader().load('./imgs/door_texture.jpg');
-    const doorMaterial = doorTexture 
-      ? new THREE.MeshStandardMaterial({ map: doorTexture })
-      : new THREE.MeshStandardMaterial({ color: 0x654321 });
-    const doorMesh = new THREE.Mesh(doorGeometry, doorMaterial);
-
-    // Compute door position in world coordinates.
-    // Create a vector in wall-local space then rotate by wall's angle.
-    const doorLocalPos = new THREE.Vector3(doorCenterLocalX, doorCenterLocalY, doorCenterLocalZ);
-    const doorWorldPos = doorLocalPos.clone();
-    // Apply rotation around Y:
-    doorWorldPos.applyAxisAngle(new THREE.Vector3(0,1,0), angle);
-    // Translate by wallMesh.position
-    doorWorldPos.add(new THREE.Vector3(posX, 0, posZ));
-    doorMesh.position.copy(doorWorldPos);
-    // Set rotation same as wall
-    doorMesh.rotation.y = angle;
-    scene.add(doorMesh);
-    allMeshes.push(doorMesh);
-  }
-
-  // 4) Add window(s) if exist
-  if (wall.windows && wall.windows.length > 0) {
-    wall.windows.forEach(win => {
-      // For window, we assume center horizontally and placed above mid-height.
-      const fraction = 0.5;
-      const windowCenterLocalX = -wallLength/2 + fraction * wallLength;
-      // For vertical position, assume window center is at 70% of wall height.
-      const windowCenterLocalY = wallHeight * 0.7;
-      const windowCenterLocalZ = wallThickness/2 + 0.01;
-      
-      const windowGeometry = new THREE.PlaneGeometry(win.width, win.height);
-      const windowTexture = new THREE.TextureLoader().load('./imgs/window_texture.jpg');
-      const windowMaterial = windowTexture
-        ? new THREE.MeshStandardMaterial({ map: windowTexture })
-        : new THREE.MeshStandardMaterial({ color: 0x87CEEB });
-      const windowMesh = new THREE.Mesh(windowGeometry, windowMaterial);
-
-      const windowLocalPos = new THREE.Vector3(windowCenterLocalX, windowCenterLocalY, windowCenterLocalZ);
-      const windowWorldPos = windowLocalPos.clone();
-      windowWorldPos.applyAxisAngle(new THREE.Vector3(0,1,0), angle);
-      windowWorldPos.add(new THREE.Vector3(posX, 0, posZ));
-      windowMesh.position.copy(windowWorldPos);
-      windowMesh.rotation.y = angle;
-      scene.add(windowMesh);
-      allMeshes.push(windowMesh);
-    });
-  }
 }
 
-// When a new wall is added
 window.addEventListener('add-wall', (evt) => {
   createWall3D(evt.detail);
   adjustCameraToFitScene();
 });
 
-// When we rebuild all walls
 window.addEventListener('update-all-walls', (evt) => {
   const { walls } = evt.detail;
-
-  // Remove old
   allMeshes.forEach(mesh => {
     scene.remove(mesh);
     mesh.geometry.dispose();
@@ -211,8 +182,6 @@ window.addEventListener('update-all-walls', (evt) => {
     mesh.material.dispose();
   });
   allMeshes.length = 0;
-
-  // Create new
   walls.forEach(w => createWall3D(w));
   adjustCameraToFitScene();
 });
@@ -226,9 +195,7 @@ const steelRodSelect = document.getElementById('steelRodSelect');
 const roofMarginInput = document.getElementById('roofMarginInput');
 const submitRoofBtn = document.getElementById('submitRoofBtn');
 
-// When user clicks Add Roof (sidebar button)
 document.getElementById('addRoof').addEventListener('click', () => {
-  // Check if at least 2 walls are drawn (walls stored in window.walls)
   if (!window.walls || window.walls.length < 2) {
     alert("Please make at least 2 walls.");
     return;
@@ -236,19 +203,17 @@ document.getElementById('addRoof').addEventListener('click', () => {
   roofModal.style.display = 'block';
 });
 
-// Close modal when clicking the cross button
 closeRoofModal.addEventListener('click', () => {
   roofModal.style.display = 'none';
 });
 
-// When user submits roof inputs
 submitRoofBtn.addEventListener('click', () => {
   const roofThicknessInches = parseFloat(roofWidthInput.value);
   if (isNaN(roofThicknessInches) || roofThicknessInches <= 0) {
     alert("Please enter a valid roof thickness in inches.");
     return;
   }
-  const steelRodDiameter = parseFloat(steelRodSelect.value); // in mm
+  const steelRodDiameter = parseFloat(steelRodSelect.value);
   if (isNaN(steelRodDiameter) || steelRodDiameter <= 0) {
     alert("Please select a valid steel rod diameter.");
     return;
@@ -258,9 +223,7 @@ submitRoofBtn.addEventListener('click', () => {
   roofModal.style.display = 'none';
 });
 
-// Create a polygon roof based on user walls, with offset
 function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
-  // 1) Gather unique endpoints
   const uniquePoints = [];
   window.walls.forEach(w => {
     const p1 = { x: w.x1, y: w.y1 };
@@ -268,15 +231,12 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
     addUniquePoint(uniquePoints, p1);
     addUniquePoint(uniquePoints, p2);
   });
-
-  // 2) Convert them to Vector2 array in meters (with Y inverted for 3D usage)
   const center = computeCenter(uniquePoints);
   uniquePoints.sort((a, b) => {
     const angleA = Math.atan2(a.y - center.y, a.x - center.x);
     const angleB = Math.atan2(b.y - center.y, b.x - center.x);
     return angleA - angleB;
   });
-
   const marginMeters = marginFeet * 0.3048;
   let shapePoints = [];
   uniquePoints.forEach(pt => {
@@ -287,37 +247,24 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
     const newR = (r / PIXELS_PER_METER) + marginMeters;
     const outX = newR * Math.cos(angle);
     const outY = newR * Math.sin(angle);
-    shapePoints.push(new Vector2(outX, outY));
+    shapePoints.push(new THREE.Vector2(outX, outY));
   });
-
   const roofShape = new THREE.Shape(shapePoints);
   const thicknessMeters = roofThicknessInches * 0.0254;
-  const extrudeSettings = {
-    depth: thicknessMeters,
-    bevelEnabled: false
-  };
+  const extrudeSettings = { depth: thicknessMeters, bevelEnabled: false };
   const shapeGeometry = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
   const roofTexture = new THREE.TextureLoader().load('./imgs/RoofTexture.jpeg');
   const roofMaterial = new THREE.MeshStandardMaterial({ map: roofTexture });
   const roofMesh = new THREE.Mesh(shapeGeometry, roofMaterial);
-
   roofMesh.rotation.x = -Math.PI / 2;
   const wallHeight = getWallHeight();
-  roofMesh.position.set(
-    center.x / PIXELS_PER_METER,
-    wallHeight + thicknessMeters,
-    -center.y / PIXELS_PER_METER
-  );
-
+  roofMesh.position.set(center.x / PIXELS_PER_METER, wallHeight + thicknessMeters, -center.y / PIXELS_PER_METER);
   scene.add(roofMesh);
   allMeshes.push(roofMesh);
-
-  // Add steel rods at each shape corner
   const rodRadius = (steelRodDiameter / 1000) / 2;
   const rodHeight = thicknessMeters + 0.1;
   const rodGeometry = new THREE.CylinderGeometry(rodRadius, rodRadius, rodHeight, 16);
   const rodMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
-
   shapePoints.forEach(vec => {
     const finalX = center.x / PIXELS_PER_METER + vec.x;
     const finalY = wallHeight + thicknessMeters + rodHeight / 2;
@@ -327,31 +274,24 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
     scene.add(rodMesh);
     allMeshes.push(rodMesh);
   });
-
   adjustCameraToFitScene();
 }
 
-// Helper: add point if not present
 function addUniquePoint(arr, p) {
   if (!arr.some(q => Math.abs(q.x - p.x) < 0.001 && Math.abs(q.y - p.y) < 0.001)) {
     arr.push(p);
   }
 }
 
-// Helper: compute center of array of points
 function computeCenter(pts) {
   let sx = 0, sy = 0;
-  pts.forEach(p => {
-    sx += p.x;
-    sy += p.y;
-  });
-  return {
-    x: sx / pts.length,
-    y: sy / pts.length
-  };
+  pts.forEach(p => { sx += p.x; sy += p.y; });
+  return { x: sx / pts.length, y: sy / pts.length };
 }
 
-// --- Beam & Column ---
+//////////////////////
+// Beam & Column
+//////////////////////
 
 let beamColumnGroup = new THREE.Group();
 const columnBeamTexture = new THREE.TextureLoader().load('./imgs/ColumnBeemTexture.jpeg');
@@ -359,7 +299,7 @@ const columnBeamTexture = new THREE.TextureLoader().load('./imgs/ColumnBeemTextu
 window.addEventListener('add-beam-column', (evt) => {
   if (beamColumnGroup.parent) {
     scene.remove(beamColumnGroup);
-    beamColumnGroup.traverse((child) => {
+    beamColumnGroup.traverse(child => {
       if (child.isMesh) {
         child.geometry.dispose();
         child.material.dispose();
@@ -367,10 +307,8 @@ window.addEventListener('add-beam-column', (evt) => {
     });
   }
   beamColumnGroup = new THREE.Group();
-
   const walls = evt.detail.walls;
   const wallHeight = getWallHeight();
-
   const uniqueEndpoints = [];
   function roundVec(v, decimals=3) {
     const f = Math.pow(10, decimals);
@@ -385,43 +323,34 @@ window.addEventListener('add-beam-column', (evt) => {
     }
     uniqueEndpoints.push(v);
   }
-
   walls.forEach(wall => {
     if (!wall.hasBeamColumn) return;
-
     const pos1 = new THREE.Vector3(wall.x1 / PIXELS_PER_METER, 0, -wall.y1 / PIXELS_PER_METER);
     const pos2 = new THREE.Vector3(wall.x2 / PIXELS_PER_METER, 0, -wall.y2 / PIXELS_PER_METER);
-
     addUniqueEndpoint(pos1);
     addUniqueEndpoint(pos2);
-
     const midX = (wall.x1 + wall.x2) / 2 / PIXELS_PER_METER;
     const midZ = -(wall.y1 + wall.y2) / 2 / PIXELS_PER_METER;
-    const angle = Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
-
+    const angle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
     const beamThickness = 0.3;
     const beamDepth = 0.3;
     const beamGeometry = new THREE.BoxGeometry(wall.lengthMeter, beamThickness, beamDepth);
     beamGeometry.translate(0, beamThickness / 2, 0);
-
     const beamMaterial = new THREE.MeshStandardMaterial({ map: columnBeamTexture });
     const beamMesh = new THREE.Mesh(beamGeometry, beamMaterial);
     beamMesh.position.set(midX, wallHeight, midZ);
     beamMesh.rotation.y = angle;
     beamColumnGroup.add(beamMesh);
   });
-
   const columnSize = 0.4;
   uniqueEndpoints.forEach(ep => {
     const columnGeometry = new THREE.BoxGeometry(columnSize, wallHeight, columnSize);
     columnGeometry.translate(0, wallHeight / 2, 0);
-
     const columnMaterial = new THREE.MeshStandardMaterial({ map: columnBeamTexture });
     const columnMesh = new THREE.Mesh(columnGeometry, columnMaterial);
     columnMesh.position.set(ep.x, 0, ep.z);
     beamColumnGroup.add(columnMesh);
   });
-
   scene.add(beamColumnGroup);
   adjustCameraToFitScene();
 });

@@ -25,21 +25,18 @@ let resizingPoint = null;
 
 // Global flag for beam & column mode
 let beamColumnActive = false;
-window.beamColumnActive = beamColumnActive; // for 3D references if needed
+window.beamColumnActive = beamColumnActive;
 
-// Undo stack: each entry is a deep copy of walls array.
 let undoStack = [];
 
-// Push the current state onto the undo stack
 function pushState() {
   const stateCopy = JSON.parse(JSON.stringify(walls));
   undoStack.push(stateCopy);
 }
 
-// Undo function: revert walls to previous state
 function undo() {
   if (undoStack.length > 1) {
-    undoStack.pop(); // Remove current state
+    undoStack.pop();
     walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
     window.walls = walls;
     redraw();
@@ -47,10 +44,8 @@ function undo() {
   }
 }
 
-// Initialize with an empty state.
 pushState();
 
-// Listen for ctrl+z (or cmd+z on mac)
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
@@ -58,13 +53,11 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Delete button
 const deleteButton = document.createElement('button');
 deleteButton.className = 'delete-button';
 deleteButton.innerHTML = 'X';
 document.body.appendChild(deleteButton);
 
-// Endpoint elements
 const endpoint1 = document.createElement('div');
 const endpoint2 = document.createElement('div');
 endpoint1.className = 'endpoint';
@@ -72,22 +65,18 @@ endpoint2.className = 'endpoint';
 document.body.appendChild(endpoint1);
 document.body.appendChild(endpoint2);
 
-// Three-dots button
 const threeDotsButton = document.createElement('button');
 threeDotsButton.className = 'three-dots-button';
 threeDotsButton.innerHTML = '...';
 document.body.appendChild(threeDotsButton);
 
-// Length form
 const lengthForm = document.getElementById('lengthForm');
 const lengthValueInput = document.getElementById('lengthValue');
 const lengthUnitSelect = document.getElementById('lengthUnit');
 const setLengthBtn = document.getElementById('setLengthBtn');
 
-// Material Estimation
 const estimateBtn = document.getElementById('estimateMaterials');
 
-// Sidebar inputs
 const wallHeightInput = document.getElementById('wallHeight');
 const heightUnitSelect = document.getElementById('heightUnit');
 const wallWidthSelect = document.getElementById('wallWidth');
@@ -95,22 +84,17 @@ const baseWidthSelect = document.getElementById('baseWidth');
 const baseDepthInput = document.getElementById('baseDepth');
 const depthUnitSelect = document.getElementById('depthUnit');
 
-// Custom Alert
 const customAlert = document.getElementById('customAlert');
 const alertMessage = document.getElementById('alertMessage');
 const closeAlertBtn = document.querySelector('#customAlert .close-btn');
 
-// Loading Overlay
 const loadingOverlay = document.getElementById('loadingOverlay');
 
-// Content (for blur)
 const content = document.getElementById('content');
 
-// Door and Window Buttons
 const addDoorBtn = document.getElementById('addDoor');
 const addWindowBtn = document.getElementById('addWindow');
 
-// Door Modal Elements
 const doorModal = document.getElementById('doorModal');
 const closeDoorModal = document.getElementById('closeDoorModal');
 const doorWidthInput = document.getElementById('doorWidthInput');
@@ -119,15 +103,14 @@ const doorUnitSelect = document.getElementById('doorUnitSelect');
 const doorSideSelect = document.getElementById('doorSideSelect');
 const submitDoorBtn = document.getElementById('submitDoorBtn');
 
-// Window Modal Elements
 const windowModal = document.getElementById('windowModal');
 const closeWindowModal = document.getElementById('closeWindowModal');
 const windowWidthInput = document.getElementById('windowWidthInput');
 const windowHeightInput = document.getElementById('windowHeightInput');
 const windowUnitSelect = document.getElementById('windowUnitSelect');
+const windowPositionSelect = document.getElementById('windowPositionSelect');
 const submitWindowBtn = document.getElementById('submitWindowBtn');
 
-// Show custom alert
 function showCustomAlert(message) {
   alertMessage.textContent = message;
   customAlert.style.display = 'block';
@@ -136,7 +119,6 @@ closeAlertBtn.addEventListener('click', () => {
   customAlert.style.display = 'none';
 });
 
-// Convert base dropdown selection to numeric thickness in meters
 function getBaseThicknessInMeters() {
   const val = baseWidthSelect.value;
   switch(val) {
@@ -151,19 +133,16 @@ function getBaseThicknessInMeters() {
   }
 }
 
-// Base depth from user input
 function getBaseDepthInMeters() {
   const val = parseFloat(baseDepthInput.value) || 0;
   return (depthUnitSelect.value === 'ft') ? (val * 0.3048) : val;
 }
 
-// Wall height
 function getWallHeightInMeters() {
   const val = parseFloat(wallHeightInput.value) || 0;
   return (heightUnitSelect.value === 'ft') ? (val * 0.3048) : val;
 }
 
-// Wall thickness
 function getWallThicknessInMeters() {
   const val = wallWidthSelect.value;
   switch(val) {
@@ -178,22 +157,16 @@ function getWallThicknessInMeters() {
   }
 }
 
-// Which base type?
 function getBaseType() {
   const option = baseWidthSelect.options[baseWidthSelect.selectedIndex];
-  return option.dataset.wallType; // 'brick' or 'block'
+  return option.dataset.wallType;
 }
 
-// Mouse position
 function getMousePos(e) {
   const rect = canvas.getBoundingClientRect();
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-// Draw grid
 function drawGrid() {
   ctx.strokeStyle = '#ddd';
   ctx.lineWidth = 0.5;
@@ -214,7 +187,6 @@ drawGrid();
 
 let hoveredWall = null;
 
-// Show/hide endpoints, delete button, etc.
 function showEndpoints(wall) {
   endpoint1.style.left = `${wall.x1 + canvas.offsetLeft - 5}px`;
   endpoint1.style.top = `${wall.y1 + canvas.offsetTop - 5}px`;
@@ -248,27 +220,18 @@ function showThreeDotsButton(x, y) {
   threeDotsButton.style.display = 'block';
 }
 
-// Check if point is on a wall line
 function isPointOnLine(px, py, w) {
-  const tolerance = 5; // Adjust if needed
-  const dist = Math.abs(
-    (w.y2 - w.y1) * px -
-    (w.x2 - w.x1) * py +
-    w.x2 * w.y1 -
-    w.y2 * w.x1
-  ) / Math.sqrt(
-    (w.y2 - w.y1)**2 + (w.x2 - w.x1)**2
-  );
+  const tolerance = 5;
+  const dist = Math.abs((w.y2 - w.y1) * px - (w.x2 - w.x1) * py + w.x2 * w.y1 - w.y2 * w.x1)
+                / Math.sqrt((w.y2 - w.y1)**2 + (w.x2 - w.x1)**2);
   return dist < tolerance;
 }
 
-// Mouse events
 canvas.addEventListener('mousedown', (e) => {
   const { x, y } = getMousePos(e);
   lengthForm.style.display = 'none';
 
   if (currentWallType) {
-    // Start a new wall
     const wh = getWallHeightInMeters();
     if (wh <= 0) {
       showCustomAlert('Wall height must be > 0.');
@@ -285,14 +248,12 @@ canvas.addEventListener('mousedown', (e) => {
       redraw();
     }
   } else {
-    // Try to select an existing wall
     const clickedWall = walls.find(w => isPointOnLine(x, y, w));
     if (clickedWall) {
       if (selectedWall) selectedWall.highlighted = false;
       clickedWall.highlighted = true;
       selectedWall = clickedWall;
       isDragging = true;
-
       const midX = (clickedWall.x1 + clickedWall.x2) / 2;
       const midY = (clickedWall.y1 + clickedWall.y2) / 2;
       showDeleteButton(midX, midY);
@@ -307,7 +268,6 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('mousemove', (e) => {
   const { x, y } = getMousePos(e);
 
-  // Resizing endpoints
   if (resizing && selectedWall) {
     if (resizingPoint === 'start') {
       selectedWall.x1 = x;
@@ -321,7 +281,6 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   }
 
-  // Hover check
   const newHovered = walls.find(w => isPointOnLine(x, y, w)) || null;
   if (newHovered !== hoveredWall) {
     hoveredWall = newHovered;
@@ -329,38 +288,31 @@ canvas.addEventListener('mousemove', (e) => {
   }
   canvas.style.cursor = hoveredWall ? 'pointer' : 'crosshair';
 
-  // Dragging a wall
   if (isDragging && selectedWall) {
     const midX = (selectedWall.x1 + selectedWall.x2) / 2;
     const midY = (selectedWall.y1 + selectedWall.y2) / 2;
     const dx = x - midX;
     const dy = y - midY;
-
     selectedWall.x1 += dx;
     selectedWall.y1 += dy;
     selectedWall.x2 += dx;
     selectedWall.y2 += dy;
-
     redraw();
     const nmx = (selectedWall.x1 + selectedWall.x2) / 2;
     const nmy = (selectedWall.y1 + selectedWall.y2) / 2;
     showDeleteButton(nmx, nmy);
     showThreeDotsButton(nmx, nmy);
     drawEnds();
-
     endpoint1.style.display = 'none';
     endpoint2.style.display = 'none';
     return;
   }
 
-  // Drawing a new wall
   if (drawing) {
     currentLine.x2 = x;
     currentLine.y2 = y;
-
     redraw();
     drawLine(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, 'black');
-
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
     drawDynamicLength(currentLine.x1, currentLine.y1, currentLine.x2, currentLine.y2, lengthM.toFixed(2), 'm');
@@ -372,7 +324,6 @@ canvas.addEventListener('mouseup', () => {
     drawing = false;
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
-
     const newWall = {
       x1: currentLine.x1,
       y1: currentLine.y1,
@@ -387,18 +338,17 @@ canvas.addEventListener('mouseup', () => {
       baseType: getBaseType(),
       displayLength: lengthM,
       unitType: 'm',
-      hasBeamColumn: false, // default false until user hits "Beam & Column"
-      door: null,         // door info will be stored here if added
-      windows: []         // window info stored here if added
+      hasBeamColumn: false,
+      door: null,
+      windows: []
     };
-
     walls.push(newWall);
     window.walls = walls;
     add3DWall(newWall);
     redraw();
-    pushState(); // Save after drawing
+    pushState();
   } else if (isDragging) {
-    pushState(); // Save after drag
+    pushState();
   }
   isDragging = false;
   resizing = false;
@@ -408,7 +358,6 @@ document.addEventListener('mouseup', () => {
   resizing = false;
 });
 
-// When leaving the canvas, clear the hover
 canvas.addEventListener('mouseleave', () => {
   canvas.style.cursor = 'default';
   if (hoveredWall) {
@@ -417,7 +366,6 @@ canvas.addEventListener('mouseleave', () => {
   }
 });
 
-// Drawing helpers
 function drawGridAndWalls() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
@@ -436,32 +384,17 @@ function drawLine(x1, y1, x2, y2, color = 'black', thickness = 2) {
 function drawWalls() {
   walls.forEach(w => {
     const thickPx = w.thickness * PIXELS_PER_METER;
-    drawLine(
-      w.x1, w.y1,
-      w.x2, w.y2,
-      w.highlighted ? 'red' : 'black',
-      thickPx
-    );
-
-    // Show length text
+    drawLine(w.x1, w.y1, w.x2, w.y2, w.highlighted ? 'red' : 'black', thickPx);
     drawLengthText(w);
-
-    // If hovered, show wall type text
     if (w === hoveredWall) {
       drawWallTypeText(w);
-
-      // If this wall has beam & columns, show them in 2D as a red overlay
       if (w.hasBeamColumn) {
         drawBeamColumn2D(w);
       }
     }
-
-    // Draw door cutout if exists
     if (w.door) {
       drawDoorCutout(w);
     }
-
-    // Draw window cutouts if exist
     if (w.windows && w.windows.length > 0) {
       w.windows.forEach(win => drawWindowCutout(w, win));
     }
@@ -469,7 +402,6 @@ function drawWalls() {
 }
 
 function drawBeamColumn2D(wall) {
-  // Draw a red "beam" line over the wall
   ctx.save();
   ctx.strokeStyle = 'red';
   ctx.lineWidth = 2;
@@ -478,10 +410,8 @@ function drawBeamColumn2D(wall) {
   ctx.lineTo(wall.x2, wall.y2);
   ctx.stroke();
   ctx.restore();
-
-  // Draw small red squares at endpoints to represent columns
   ctx.fillStyle = 'red';
-  const size = 6; // square side
+  const size = 6;
   ctx.fillRect(wall.x1 - size/2, wall.y1 - size/2, size, size);
   ctx.fillRect(wall.x2 - size/2, wall.y2 - size/2, size, size);
 }
@@ -491,7 +421,6 @@ function drawLengthText(w) {
   const midY = (w.y1 + w.y2) / 2;
   ctx.font = '12px Arial';
   ctx.fillStyle = 'red';
-
   const suffix = w.unitType === 'ft' ? ' ft' : ' m';
   const text = w.displayLength.toFixed(2) + suffix;
   ctx.fillText(text, midX, midY - 10);
@@ -502,7 +431,7 @@ function drawWallTypeText(w) {
   const midY = (w.y1 + w.y2) / 2;
   ctx.font = '12px Arial';
   ctx.fillStyle = 'green';
-  const text = (w.wallType === 'brick') ? 'Brick Wall' : 'Block Wall';
+  const text = w.wallType === 'brick' ? 'Brick Wall' : 'Block Wall';
   ctx.fillText(text, midX, midY + 15);
 }
 
@@ -530,13 +459,17 @@ function redraw() {
   drawGridAndWalls();
 }
 
-// Draw door cutout on 2D (a simple rectangle with “D”)
+// In 2D view the cutout is shown as a semi-transparent rectangle with a label.
 function drawDoorCutout(wall) {
-  // Determine door position along the wall based on side (left => 25%, right => 75%)
-  const fraction = (wall.door.side === 'left') ? 0.25 : 0.75;
+  let fraction;
+  switch (wall.door.side) {
+    case 'left': fraction = 0.25; break;
+    case 'center': fraction = 0.5; break;
+    case 'right': fraction = 0.75; break;
+    default: fraction = 0.5;
+  }
   const doorCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
   const doorCenterY = wall.y1 + fraction * (wall.y2 - wall.y1);
-  // Convert door dimensions (meters to pixels)
   const doorWidthPx = wall.door.width * PIXELS_PER_METER;
   const doorHeightPx = wall.door.height * PIXELS_PER_METER;
   ctx.save();
@@ -548,12 +481,16 @@ function drawDoorCutout(wall) {
   ctx.restore();
 }
 
-// Draw window cutout on 2D (a simple rectangle with “W”)
-// For window, we assume it is centered horizontally along the wall.
 function drawWindowCutout(wall, win) {
-  const fraction = 0.5;
+  let fraction;
+  switch (win.position) {
+    case 'left': fraction = 0.25; break;
+    case 'center': fraction = 0.5; break;
+    case 'right': fraction = 0.75; break;
+    default: fraction = 0.5;
+  }
   const winCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
-  const winCenterY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  const winCenterY = wall.y1 + 0.7 * (wall.y2 - wall.y1);
   const winWidthPx = win.width * PIXELS_PER_METER;
   const winHeightPx = win.height * PIXELS_PER_METER;
   ctx.save();
@@ -565,7 +502,6 @@ function drawWindowCutout(wall, win) {
   ctx.restore();
 }
 
-// Buttons / events
 deleteButton.addEventListener('click', () => {
   if (selectedWall) {
     walls = walls.filter(w => w !== selectedWall);
@@ -587,7 +523,6 @@ threeDotsButton.addEventListener('click', () => {
   lengthForm.style.left = `${leftPos}px`;
   lengthForm.style.top = `${topPos}px`;
   lengthForm.style.display = 'block';
-
   if (selectedWall.unitType === 'ft') {
     lengthValueInput.value = selectedWall.displayLength;
     lengthUnitSelect.value = 'ft';
@@ -599,30 +534,24 @@ threeDotsButton.addEventListener('click', () => {
 
 setLengthBtn.addEventListener('click', () => {
   if (!selectedWall) return;
-
   let newVal = parseFloat(lengthValueInput.value);
   if (isNaN(newVal) || newVal <= 0) {
     showCustomAlert('Please enter a valid length > 0.');
     return;
   }
-
   const oldLength = selectedWall.lengthMeter;
   if (oldLength === 0) return;
-
   let newLengthM = newVal;
   if (lengthUnitSelect.value === 'ft') {
     newLengthM = newVal * 0.3048;
   }
-
   const ratio = newLengthM / oldLength;
   const midX = (selectedWall.x1 + selectedWall.x2) / 2;
   const midY = (selectedWall.y1 + selectedWall.y2) / 2;
-
   selectedWall.x1 = midX + (selectedWall.x1 - midX) * ratio;
   selectedWall.y1 = midY + (selectedWall.y1 - midY) * ratio;
   selectedWall.x2 = midX + (selectedWall.x2 - midX) * ratio;
   selectedWall.y2 = midY + (selectedWall.y2 - midY) * ratio;
-
   selectedWall.lengthMeter = newLengthM;
   if (lengthUnitSelect.value === 'ft') {
     selectedWall.displayLength = newVal;
@@ -631,7 +560,6 @@ setLengthBtn.addEventListener('click', () => {
     selectedWall.displayLength = newVal;
     selectedWall.unitType = 'm';
   }
-
   redraw();
   updateAllWalls();
   pushState();
@@ -669,7 +597,6 @@ document.getElementById('blockWall').addEventListener('click', () => {
 function filterWallWidthOptions(wallType) {
   const options = wallWidthSelect.options;
   let firstVisibleIndex = -1;
-
   for (let i = 0; i < options.length; i++) {
     const opt = options[i];
     if (!wallType) {
@@ -687,7 +614,6 @@ function filterWallWidthOptions(wallType) {
   }
 }
 
-// Material Estimation
 estimateBtn.addEventListener('click', () => {
   handleEstimateMaterials();
 });
@@ -710,11 +636,8 @@ function calculateMaterialEstimation() {
     showCustomAlert('Please enter valid wall height & thickness first!');
     return null;
   }
-  // Brick dimensions
   const brickL = 9 * 0.0254, brickW = 4 * 0.0254, brickH = 3 * 0.0254;
-  // Block dimensions
   const blockL = 18 * 0.0254, blockH_ = 6 * 0.0254, blockW_ = 8 * 0.0254;
-
   let totalBrickVol = 0, totalBlockVol = 0, totalLen = 0;
   walls.forEach(w => {
     const vol = w.lengthMeter * wh * wt;
@@ -722,76 +645,54 @@ function calculateMaterialEstimation() {
     if (w.wallType === 'brick') totalBrickVol += vol;
     else if (w.wallType === 'block') totalBlockVol += vol;
   });
-
   const brickVol = brickL * brickW * brickH;
   const blockVol = blockL * blockH_ * blockW_;
-
   const numBricks = Math.ceil(totalBrickVol / brickVol);
   const numBlocks = Math.ceil(totalBlockVol / blockVol);
-
   const mortarVolB = 0.2 * totalBrickVol;
   const mortarVolBl = 0.2 * totalBlockVol;
   const totalMortar = mortarVolB + mortarVolBl;
-
   const cementVol = totalMortar / 6;
   const sandVol = (5 * totalMortar) / 6;
   const bagsCement = Math.ceil(cementVol / 0.035);
-
   return {
     totalLength: totalLen.toFixed(2),
     numberOfWalls: walls.length,
     height: wh.toFixed(2),
-    brickWalls: {
-      volume: totalBrickVol.toFixed(2),
-      bricksRequired: numBricks
-    },
-    blockWalls: {
-      volume: totalBlockVol.toFixed(2),
-      blocksRequired: numBlocks
-    },
-    mortar: {
-      totalVolume: totalMortar.toFixed(2),
-      cementBags: bagsCement,
-      sandVolume: sandVol.toFixed(2)
-    }
+    brickWalls: { volume: totalBrickVol.toFixed(2), bricksRequired: numBricks },
+    blockWalls: { volume: totalBlockVol.toFixed(2), blocksRequired: numBlocks },
+    mortar: { totalVolume: totalMortar.toFixed(2), cementBags: bagsCement, sandVolume: sandVol.toFixed(2) }
   };
 }
 
-// Beam & Column
 const beamColumnBtn = document.getElementById('beamColumn');
 beamColumnBtn.addEventListener('click', () => {
-  // Mark all walls as having beam/column
-  walls.forEach(w => {
-    w.hasBeamColumn = true;
-  });
+  walls.forEach(w => { w.hasBeamColumn = true; });
   beamColumnActive = true;
-  window.beamColumnActive = true; // for 3D
+  window.beamColumnActive = true;
   const event = new CustomEvent('add-beam-column', { detail: { walls } });
   window.dispatchEvent(event);
   redraw();
 });
 
-// Send newly drawn wall to 3D
 function add3DWall(wall) {
   const ev = new CustomEvent('add-wall', { detail: wall });
   window.dispatchEvent(ev);
 }
 
-// Update all walls in 3D
 function updateAllWalls() {
   const ev = new CustomEvent('update-all-walls', { detail: { walls } });
   window.dispatchEvent(ev);
-
-  // If beam & column mode is active, recalculate them
   if (beamColumnActive) {
     const ev2 = new CustomEvent('add-beam-column', { detail: { walls } });
     window.dispatchEvent(ev2);
   }
 }
 
-// ---------- Door and Window Modal Events ----------
+//////////////////////
+// Door/Window Modals
+//////////////////////
 
-// Open door modal when "Add Door" button is clicked
 addDoorBtn.addEventListener('click', () => {
   if (!selectedWall) {
     showCustomAlert('Please select a wall first.');
@@ -800,12 +701,10 @@ addDoorBtn.addEventListener('click', () => {
   doorModal.style.display = 'block';
 });
 
-// Close door modal
 closeDoorModal.addEventListener('click', () => {
   doorModal.style.display = 'none';
 });
 
-// Submit door modal: add door info to selected wall
 submitDoorBtn.addEventListener('click', () => {
   if (!selectedWall) return;
   const dWidth = parseFloat(doorWidthInput.value);
@@ -820,19 +719,13 @@ submitDoorBtn.addEventListener('click', () => {
     doorWidthM = dWidth * 0.3048;
     doorHeightM = dHeight * 0.3048;
   }
-  // Save door info into the wall object
-  selectedWall.door = {
-    width: doorWidthM,
-    height: doorHeightM,
-    side: doorSideSelect.value
-  };
+  selectedWall.door = { width: doorWidthM, height: doorHeightM, side: doorSideSelect.value };
   redraw();
   updateAllWalls();
   pushState();
   doorModal.style.display = 'none';
 });
 
-// Open window modal when "Add Window" button is clicked
 addWindowBtn.addEventListener('click', () => {
   if (!selectedWall) {
     showCustomAlert('Please select a wall first.');
@@ -841,12 +734,10 @@ addWindowBtn.addEventListener('click', () => {
   windowModal.style.display = 'block';
 });
 
-// Close window modal
 closeWindowModal.addEventListener('click', () => {
   windowModal.style.display = 'none';
 });
 
-// Submit window modal: add window info to selected wall (allow multiple windows)
 submitWindowBtn.addEventListener('click', () => {
   if (!selectedWall) return;
   const wWidth = parseFloat(windowWidthInput.value);
@@ -861,14 +752,8 @@ submitWindowBtn.addEventListener('click', () => {
     windowWidthM = wWidth * 0.3048;
     windowHeightM = wHeight * 0.3048;
   }
-  // For window, we assume it is always centered horizontally
-  const windowData = {
-    width: windowWidthM,
-    height: windowHeightM
-  };
-  if (!selectedWall.windows) {
-    selectedWall.windows = [];
-  }
+  const windowData = { width: windowWidthM, height: windowHeightM, position: windowPositionSelect.value };
+  if (!selectedWall.windows) { selectedWall.windows = []; }
   selectedWall.windows.push(windowData);
   redraw();
   updateAllWalls();
