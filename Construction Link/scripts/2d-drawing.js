@@ -39,10 +39,9 @@ function pushState() {
 // Undo function: revert walls to previous state
 function undo() {
   if (undoStack.length > 1) {
-    undoStack.pop(); // remove current
+    undoStack.pop(); // Remove current state
     walls = JSON.parse(JSON.stringify(undoStack[undoStack.length - 1]));
     window.walls = walls;
-    selectedWall = null; // Clear any stale reference
     redraw();
     updateAllWalls();
   }
@@ -88,16 +87,6 @@ const setLengthBtn = document.getElementById('setLengthBtn');
 // Material Estimation
 const estimateBtn = document.getElementById('estimateMaterials');
 
-// Door/Window Button and Modal
-const doorWindowBtn = document.getElementById('doorWindowBtn');
-const doorWindowModal = document.getElementById('doorWindowModal');
-const closeDoorWindowModal = document.getElementById('closeDoorWindowModal');
-const openingTypeSelect = document.getElementById('openingType');
-const openingWidthInput = document.getElementById('openingWidth');
-const openingHeightInput = document.getElementById('openingHeight');
-const openingLocationSelect = document.getElementById('openingLocation');
-const addOpeningBtn = document.getElementById('addOpeningBtn');
-
 // Sidebar inputs
 const wallHeightInput = document.getElementById('wallHeight');
 const heightUnitSelect = document.getElementById('heightUnit');
@@ -116,6 +105,27 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 
 // Content (for blur)
 const content = document.getElementById('content');
+
+// Door and Window Buttons
+const addDoorBtn = document.getElementById('addDoor');
+const addWindowBtn = document.getElementById('addWindow');
+
+// Door Modal Elements
+const doorModal = document.getElementById('doorModal');
+const closeDoorModal = document.getElementById('closeDoorModal');
+const doorWidthInput = document.getElementById('doorWidthInput');
+const doorHeightInput = document.getElementById('doorHeightInput');
+const doorUnitSelect = document.getElementById('doorUnitSelect');
+const doorSideSelect = document.getElementById('doorSideSelect');
+const submitDoorBtn = document.getElementById('submitDoorBtn');
+
+// Window Modal Elements
+const windowModal = document.getElementById('windowModal');
+const closeWindowModal = document.getElementById('closeWindowModal');
+const windowWidthInput = document.getElementById('windowWidthInput');
+const windowHeightInput = document.getElementById('windowHeightInput');
+const windowUnitSelect = document.getElementById('windowUnitSelect');
+const submitWindowBtn = document.getElementById('submitWindowBtn');
 
 // Show custom alert
 function showCustomAlert(message) {
@@ -363,7 +373,6 @@ canvas.addEventListener('mouseup', () => {
     const lengthPx = Math.hypot(currentLine.x2 - currentLine.x1, currentLine.y2 - currentLine.y1);
     const lengthM = lengthPx / PIXELS_PER_METER;
 
-    // Create new wall with an empty openings array
     const newWall = {
       x1: currentLine.x1,
       y1: currentLine.y1,
@@ -378,8 +387,9 @@ canvas.addEventListener('mouseup', () => {
       baseType: getBaseType(),
       displayLength: lengthM,
       unitType: 'm',
-      hasBeamColumn: false,
-      openings: []
+      hasBeamColumn: false, // default false until user hits "Beam & Column"
+      door: null,         // door info will be stored here if added
+      windows: []         // window info stored here if added
     };
 
     walls.push(newWall);
@@ -446,11 +456,14 @@ function drawWalls() {
       }
     }
 
-    // Draw door/window openings if any (as a blue line segment)
-    if (w.openings && w.openings.length > 0) {
-      w.openings.forEach(opening => {
-        drawOpening2D(w, opening);
-      });
+    // Draw door cutout if exists
+    if (w.door) {
+      drawDoorCutout(w);
+    }
+
+    // Draw window cutouts if exist
+    if (w.windows && w.windows.length > 0) {
+      w.windows.forEach(win => drawWindowCutout(w, win));
     }
   });
 }
@@ -466,9 +479,9 @@ function drawBeamColumn2D(wall) {
   ctx.stroke();
   ctx.restore();
 
-  // Draw small red squares at endpoints
+  // Draw small red squares at endpoints to represent columns
   ctx.fillStyle = 'red';
-  const size = 6;
+  const size = 6; // square side
   ctx.fillRect(wall.x1 - size/2, wall.y1 - size/2, size, size);
   ctx.fillRect(wall.x2 - size/2, wall.y2 - size/2, size, size);
 }
@@ -515,6 +528,41 @@ function drawEnds() {
 
 function redraw() {
   drawGridAndWalls();
+}
+
+// Draw door cutout on 2D (a simple rectangle with “D”)
+function drawDoorCutout(wall) {
+  // Determine door position along the wall based on side (left => 25%, right => 75%)
+  const fraction = (wall.door.side === 'left') ? 0.25 : 0.75;
+  const doorCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
+  const doorCenterY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  // Convert door dimensions (meters to pixels)
+  const doorWidthPx = wall.door.width * PIXELS_PER_METER;
+  const doorHeightPx = wall.door.height * PIXELS_PER_METER;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(doorCenterX - doorWidthPx/2, doorCenterY - doorHeightPx/2, doorWidthPx, doorHeightPx);
+  ctx.fillStyle = 'white';
+  ctx.font = '10px Arial';
+  ctx.fillText('D', doorCenterX - 3, doorCenterY + 3);
+  ctx.restore();
+}
+
+// Draw window cutout on 2D (a simple rectangle with “W”)
+// For window, we assume it is centered horizontally along the wall.
+function drawWindowCutout(wall, win) {
+  const fraction = 0.5;
+  const winCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
+  const winCenterY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  const winWidthPx = win.width * PIXELS_PER_METER;
+  const winHeightPx = win.height * PIXELS_PER_METER;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(winCenterX - winWidthPx/2, winCenterY - winHeightPx/2, winWidthPx, winHeightPx);
+  ctx.fillStyle = 'white';
+  ctx.font = '10px Arial';
+  ctx.fillText('W', winCenterX - 3, winCenterY + 3);
+  ctx.restore();
 }
 
 // Buttons / events
@@ -734,104 +782,96 @@ function updateAllWalls() {
   const ev = new CustomEvent('update-all-walls', { detail: { walls } });
   window.dispatchEvent(ev);
 
-  // If beamColumnActive is true, recalc them
+  // If beam & column mode is active, recalculate them
   if (beamColumnActive) {
     const ev2 = new CustomEvent('add-beam-column', { detail: { walls } });
     window.dispatchEvent(ev2);
   }
 }
 
-// ---- New Door/Window Logic ----
+// ---------- Door and Window Modal Events ----------
 
-// Open door/window modal
-doorWindowBtn.addEventListener('click', () => {
+// Open door modal when "Add Door" button is clicked
+addDoorBtn.addEventListener('click', () => {
   if (!selectedWall) {
     showCustomAlert('Please select a wall first.');
     return;
   }
-  doorWindowModal.style.display = 'block';
+  doorModal.style.display = 'block';
 });
 
-// Close door/window modal
-closeDoorWindowModal.addEventListener('click', () => {
-  doorWindowModal.style.display = 'none';
+// Close door modal
+closeDoorModal.addEventListener('click', () => {
+  doorModal.style.display = 'none';
 });
 
-// Add door/window opening
-addOpeningBtn.addEventListener('click', () => {
+// Submit door modal: add door info to selected wall
+submitDoorBtn.addEventListener('click', () => {
   if (!selectedWall) return;
-
-  const openingType = openingTypeSelect.value; // 'door' or 'window'
-  const openingWidthFt = parseFloat(openingWidthInput.value);
-  const openingHeightFt = parseFloat(openingHeightInput.value);
-  const openingLocation = openingLocationSelect.value; // left, center, right
-
-  if (isNaN(openingWidthFt) || openingWidthFt <= 0 ||
-      isNaN(openingHeightFt) || openingHeightFt <= 0) {
-    showCustomAlert('Please enter valid dimensions for the opening.');
+  const dWidth = parseFloat(doorWidthInput.value);
+  const dHeight = parseFloat(doorHeightInput.value);
+  if (isNaN(dWidth) || dWidth <= 0 || isNaN(dHeight) || dHeight <= 0) {
+    showCustomAlert('Please enter valid door dimensions.');
     return;
   }
-
-  // Convert from feet to meters
-  const openingWidthM = openingWidthFt * 0.3048;
-  const openingHeightM = openingHeightFt * 0.3048;
-
-  // Remove the selected wall
-  walls = walls.filter(w => w !== selectedWall);
-
-  // Create new wall with same data + new opening
-  const newWall = JSON.parse(JSON.stringify(selectedWall));
-  newWall.openings = newWall.openings || [];
-  newWall.openings.push({
-    type: openingType,
-    width: openingWidthM,
-    height: openingHeightM,
-    location: openingLocation
-  });
-
-  // Add new wall
-  walls.push(newWall);
-  window.walls = walls;
-
-  // Redraw + push state
+  let doorWidthM = dWidth;
+  let doorHeightM = dHeight;
+  if (doorUnitSelect.value === 'ft') {
+    doorWidthM = dWidth * 0.3048;
+    doorHeightM = dHeight * 0.3048;
+  }
+  // Save door info into the wall object
+  selectedWall.door = {
+    width: doorWidthM,
+    height: doorHeightM,
+    side: doorSideSelect.value
+  };
   redraw();
   updateAllWalls();
   pushState();
-
-  doorWindowModal.style.display = 'none';
+  doorModal.style.display = 'none';
 });
 
-// 2D visual for the opening
-function drawOpening2D(wall, opening) {
-  // We'll show a thick blue line segment representing the opening
-  const dx = wall.x2 - wall.x1;
-  const dy = wall.y2 - wall.y1;
-  const wallLenPx = Math.hypot(dx, dy);
-
-  const openingWidthPx = opening.width * PIXELS_PER_METER;
-
-  let startOffset = 0;
-  if (opening.location === 'center') {
-    startOffset = (wallLenPx - openingWidthPx) / 2;
-  } else if (opening.location === 'right') {
-    startOffset = wallLenPx - openingWidthPx;
+// Open window modal when "Add Window" button is clicked
+addWindowBtn.addEventListener('click', () => {
+  if (!selectedWall) {
+    showCustomAlert('Please select a wall first.');
+    return;
   }
+  windowModal.style.display = 'block';
+});
 
-  const ux = dx / wallLenPx;
-  const uy = dy / wallLenPx;
+// Close window modal
+closeWindowModal.addEventListener('click', () => {
+  windowModal.style.display = 'none';
+});
 
-  const startX = wall.x1 + ux * startOffset;
-  const startY = wall.y1 + uy * startOffset;
-
-  const endX = startX + ux * openingWidthPx;
-  const endY = startY + uy * openingWidthPx;
-
-  ctx.save();
-  ctx.strokeStyle = 'blue';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.lineTo(endX, endY);
-  ctx.stroke();
-  ctx.restore();
-}
+// Submit window modal: add window info to selected wall (allow multiple windows)
+submitWindowBtn.addEventListener('click', () => {
+  if (!selectedWall) return;
+  const wWidth = parseFloat(windowWidthInput.value);
+  const wHeight = parseFloat(windowHeightInput.value);
+  if (isNaN(wWidth) || wWidth <= 0 || isNaN(wHeight) || wHeight <= 0) {
+    showCustomAlert('Please enter valid window dimensions.');
+    return;
+  }
+  let windowWidthM = wWidth;
+  let windowHeightM = wHeight;
+  if (windowUnitSelect.value === 'ft') {
+    windowWidthM = wWidth * 0.3048;
+    windowHeightM = wHeight * 0.3048;
+  }
+  // For window, we assume it is always centered horizontally
+  const windowData = {
+    width: windowWidthM,
+    height: windowHeightM
+  };
+  if (!selectedWall.windows) {
+    selectedWall.windows = [];
+  }
+  selectedWall.windows.push(windowData);
+  redraw();
+  updateAllWalls();
+  pushState();
+  windowModal.style.display = 'none';
+});

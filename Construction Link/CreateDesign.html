@@ -29,7 +29,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      overflow-y: auto; /* enables scrolling in the sidebar */
+      overflow-y: auto;
     }
 
     .sidebar img {
@@ -69,7 +69,7 @@
     /* Container for buttons with its own scroll bar */
     #sidebar-buttons {
       width: 100%;
-      max-height: 300px; /* adjust as needed */
+      max-height: 400px;
       overflow-y: auto;
     }
 
@@ -219,7 +219,7 @@
       height: 100px;
     }
 
-    /* Professional Roof Modal & Door/Window Modal */
+    /* Professional Roof Modal */
     .modal {
       display: none;
       position: fixed;
@@ -344,7 +344,8 @@
           <button id="blockWall">Block Wall</button>
           <button id="updateWalls">Update Walls</button>
           <button id="estimateMaterials">Estimate Materials</button>
-          <button id="doorWindowBtn">Door/Window</button>
+          <button id="addDoor">Add Door</button>
+          <button id="addWindow">Add Window</button>
         </div>
       </div>
     </div>
@@ -413,27 +414,53 @@
     </div>
   </div>
 
-  <!-- Door/Window Modal -->
-  <div id="doorWindowModal" class="modal">
+  <!-- Door Modal -->
+  <div id="doorModal" class="modal">
     <div class="modal-content">
-      <span class="close" id="closeDoorWindowModal">&times;</span>
-      <h2>Add Door/Window</h2>
-      <label for="openingType">Type:</label>
-      <select id="openingType">
-        <option value="door">Door</option>
-        <option value="window">Window</option>
+      <span class="close" id="closeDoorModal">&times;</span>
+      <h2>Add Door</h2>
+
+      <label for="doorWidthInput">Door Width:</label>
+      <input type="number" id="doorWidthInput" placeholder="Enter width" min="0.1" step="0.1" />
+
+      <label for="doorHeightInput">Door Height:</label>
+      <input type="number" id="doorHeightInput" placeholder="Enter height" min="0.1" step="0.1" />
+
+      <label for="doorUnitSelect">Unit:</label>
+      <select id="doorUnitSelect">
+        <option value="m">Meter</option>
+        <option value="ft">Foot</option>
       </select>
-      <label for="openingWidth">Width (ft):</label>
-      <input type="number" id="openingWidth" placeholder="Enter width in feet" min="0.1" step="0.1" />
-      <label for="openingHeight">Height (ft):</label>
-      <input type="number" id="openingHeight" placeholder="Enter height in feet" min="0.1" step="0.1" />
-      <label for="openingLocation">Location:</label>
-      <select id="openingLocation">
+
+      <label for="doorSideSelect">Door Side:</label>
+      <select id="doorSideSelect">
         <option value="left">Left</option>
-        <option value="center">Center</option>
         <option value="right">Right</option>
       </select>
-      <button id="addOpeningBtn">Add Opening</button>
+
+      <button id="submitDoorBtn">Add Door</button>
+    </div>
+  </div>
+
+  <!-- Window Modal -->
+  <div id="windowModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeWindowModal">&times;</span>
+      <h2>Add Window</h2>
+
+      <label for="windowWidthInput">Window Width:</label>
+      <input type="number" id="windowWidthInput" placeholder="Enter width" min="0.1" step="0.1" />
+
+      <label for="windowHeightInput">Window Height:</label>
+      <input type="number" id="windowHeightInput" placeholder="Enter height" min="0.1" step="0.1" />
+
+      <label for="windowUnitSelect">Unit:</label>
+      <select id="windowUnitSelect">
+        <option value="m">Meter</option>
+        <option value="ft">Foot</option>
+      </select>
+
+      <button id="submitWindowBtn">Add Window</button>
     </div>
   </div>
 
