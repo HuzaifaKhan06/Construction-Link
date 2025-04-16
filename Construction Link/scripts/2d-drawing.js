@@ -624,6 +624,8 @@ function handleEstimateMaterials() {
     window.location.href = 'estimate.html';
   }, 1500);
 }
+
+/* Updated Material Estimation Function */
 function calculateMaterialEstimation() {
   const wh = getWallHeightInMeters();
   const wt = getWallThicknessInMeters();
@@ -631,29 +633,191 @@ function calculateMaterialEstimation() {
     showCustomAlert('Please enter valid wall height & thickness first!');
     return null;
   }
+
+  // Brick and Block dimensions (assumed average brick/block dimensions)
   const brickL = 9 * 0.0254, brickW = 4 * 0.0254, brickH = 3 * 0.0254;
-  const blockL = 18 * 0.0254, blockH_ = 6 * 0.0254, blockW_ = 8 * 0.0254;
+  const blockL = 18 * 0.0254, blockW_ = 8 * 0.0254, blockH_ = 6 * 0.0254;
   let totalBrickVol = 0, totalBlockVol = 0, totalLen = 0;
+
+  // Sum volumes for the base concrete (for all walls)
+  let totalBaseVolume = 0;
+
+  // 1) Loop over each wall and subtract door/window cutouts from wall volume
   walls.forEach(w => {
-    const vol = w.lengthMeter * wh * wt;
+    // A) Wall volume
+    let wallArea = w.lengthMeter * wh; // original wall area in m²
+    let cutoutArea = 0;
+    if (w.door) {
+      cutoutArea += w.door.width * w.door.height;
+    }
+    if (w.windows && w.windows.length > 0) {
+      w.windows.forEach(win => {
+        cutoutArea += win.width * win.height;
+      });
+    }
+    let effectiveArea = Math.max(wallArea - cutoutArea, 0);
+    let effectiveVolume = effectiveArea * wt;
     totalLen += w.lengthMeter;
-    if (w.wallType === 'brick') totalBrickVol += vol;
-    else if (w.wallType === 'block') totalBlockVol += vol;
+
+    if (w.wallType === 'brick') {
+      totalBrickVol += effectiveVolume;
+    } else if (w.wallType === 'block') {
+      totalBlockVol += effectiveVolume;
+    }
+
+    // B) Base volume (if baseDepth > 0 and baseThickness > 0)
+    if (w.baseDepth > 0 && w.baseThickness > 0) {
+      // Volume = length * baseThickness * baseDepth
+      const baseVol = w.lengthMeter * w.baseThickness * w.baseDepth;
+      totalBaseVolume += baseVol;
+    }
   });
+
+  // 2) Convert brick/block volume to # of bricks/blocks
   const brickVol = brickL * brickW * brickH;
-  const blockVol = blockL * blockH_ * blockW_;
+  const blockVol = blockL * blockW_ * blockH_;
   const numBricks = Math.ceil(totalBrickVol / brickVol);
   const numBlocks = Math.ceil(totalBlockVol / blockVol);
-  const mortarVolB = 0.2 * totalBrickVol;
-  const mortarVolBl = 0.2 * totalBlockVol;
-  const totalMortar = mortarVolB + mortarVolBl;
-  const cementVol = totalMortar / 6;
-  const sandVol = (5 * totalMortar) / 6;
-  const bagsCement = Math.ceil(cementVol / 0.035);
+
+  // 3) Mortar volume for walls (assume 20% extra volume for bonding)
+  const mortarVolBricks = 0.2 * totalBrickVol;
+  const mortarVolBlocks = 0.2 * totalBlockVol;
+  const totalMortar = mortarVolBricks + mortarVolBlocks;
+  // Mix ratio for mortar (1:6). That means totalMortar = cement + sand
+  const cementVolForMortar = totalMortar / 6;
+  const sandMortar = (5 * totalMortar) / 6;
+  // 1 bag ~ 0.035 m³
+  const bagsCementMortar = Math.ceil(cementVolForMortar / 0.035);
+
+  // 4) Beam estimation (volume + rods). 
+  //    We assume a standard 0.3m x 0.3m cross-section for the beam.
+  //    "beamTotalLength" is the sum of lengths of walls that have hasBeamColumn = true.
+  let beamTotalLength = 0;
+  walls.forEach(w => {
+    if (w.hasBeamColumn) {
+      beamTotalLength += w.lengthMeter;
+    }
+  });
+  const beamCrossSection = 0.3 * 0.3; // 0.09 m²
+  const beamVolume = beamCrossSection * beamTotalLength; 
+  // Concrete ratio 1:2:4 => total 7 parts
+  const cementVolBeam = beamVolume / 7;
+  const sandBeam = (2 * beamVolume) / 7;
+  const crushBeam = (4 * beamVolume) / 7;
+  const bagsCementBeam = Math.ceil(cementVolBeam / 0.035);
+
+  // Steel rods for beams:
+  //  Let's store the diameter the same as roof rods if roof was added, 
+  //  or default to 16 mm if not set.
+  let beamRodDiameter = 16;
+  if (window.roofData && window.roofData.steelRodDiameter) {
+    beamRodDiameter = window.roofData.steelRodDiameter;
+  }
+  // for beams, assume 4 rods per meter of beam length:
+  let beamSteelRods = Math.ceil(beamTotalLength) * 4;
+
+  // 5) Roof estimation 
+  //    If user added a roof, we'll compute roof volume from the extruded shape (area * thickness).
+  //    We stored "roofData" in the 3D script, which includes polygon rodsCount, thicknessInches, etc.
+  let roofVolume = 0;
+  let roofRodCount = 0;
+  let roofRodDiameter = 0;
+  if (window.roofData) {
+    roofRodCount = window.roofData.rodsCount;
+    roofRodDiameter = window.roofData.steelRodDiameter || 16;
+    // Approx roof area from extrude geometry:
+    // Because we only store rodCount & thicknessInches, let's do a simpler approach:
+    // We can store roofData.roofArea if needed, but we didn't. Let's estimate from rodsCount:
+    // Instead, let's do a rough guess: rodsCount is the number of polygon vertices. 
+    // For a more accurate approach, we could store area in roofData, but let's assume user wants a simpler approach.
+    // We'll do an approximate approach or store it if you wish. 
+    // If you prefer a real approach, the 3D code would have to store shapePoints area. 
+    // Let's assume shapePoints area is in roofData.roofArea if we updated 3D code. 
+    // For now, let's do a sample approach: if you want an actual approach, store it in roofData.
+
+    if (window.roofData.roofArea) {
+      // Real approach if stored
+      const thicknessM = window.roofData.thicknessInches * 0.0254;
+      roofVolume = window.roofData.roofArea * thicknessM;
+    } else {
+      // fallback: assume each side is ~3m, rodsCount sides => perimeter = 3 * rodsCount, area ~ perimeter² / (4π)? 
+      // We'll just do a rough small number if not stored.
+      roofVolume = 0; 
+    }
+  }
+  // If we want to compute materials for the roof slab:
+  // ratio 1:2:4 => total 7 parts
+  const cementVolRoof = roofVolume / 7;
+  const sandRoof = (2 * roofVolume) / 7;
+  const crushRoof = (4 * roofVolume) / 7;
+  const bagsCementRoof = Math.ceil(cementVolRoof / 0.035);
+
+  // 6) Floor estimation 
+  //    We do have window.floorData area & thicknessInches. So let's compute it properly.
+  let floorVolume = 0;
+  let floorArea = 0;
+  let floorRodCount = 0; // if you want to add rebar in floor
+  let floorRodDiameter = 0;
+  if (window.floorData) {
+    floorArea = window.floorData.area; // m²
+    const floorThickness = window.floorData.thicknessInches * 0.0254; 
+    floorVolume = floorArea * floorThickness;
+    // If you want floor steel rods:
+    // For example, assume you have 1 rod per meter in each direction => floorRodCount = floorArea * 2.
+    floorRodCount = Math.ceil(floorArea * 2);
+    // default diameter or same as beam if you want
+    floorRodDiameter = beamRodDiameter; 
+  }
+  // ratio 1:2:4 for floor
+  const cementVolFloor = floorVolume / 7;
+  const sandFloor = (2 * floorVolume) / 7;
+  const crushFloor = (4 * floorVolume) / 7;
+  const bagsCementFloor = Math.ceil(cementVolFloor / 0.035);
+
+  // 7) Base concrete: ratio 1:2:4
+  const cementVolBase = totalBaseVolume / 7;
+  const sandBase = (2 * totalBaseVolume) / 7;
+  const crushBase = (4 * totalBaseVolume) / 7;
+  const bagsCementBase = Math.ceil(cementVolBase / 0.035);
+
+  // 8) Summation of everything for a "Total" section
+  // We'll accumulate total cement (for mortar, beams, roof, floor, base),
+  // total sand, total crush, total rods.
+  const totalCementBags =
+    bagsCementMortar +
+    bagsCementBeam +
+    bagsCementRoof +
+    bagsCementFloor +
+    bagsCementBase;
+
+  const totalSand =
+    parseFloat(sandMortar.toFixed(2)) +
+    sandBeam +
+    sandRoof +
+    sandFloor +
+    sandBase;
+
+  const totalCrush =
+    crushBeam +
+    crushRoof +
+    crushFloor +
+    crushBase;
+
+  // For rods, we sum the beams rods, roof rods, floor rods
+  // (Walls might also have rods if you want, but not in our approach.)
+  const totalSteelRods =
+    beamSteelRods +
+    roofRodCount +
+    floorRodCount;
+
+  // Return the entire object so it can be displayed in estimate.html
   return {
+    // Basic design summary
     totalLength: totalLen.toFixed(2),
     numberOfWalls: walls.length,
     height: wh.toFixed(2),
+
+    // Brick/Block walls
     brickWalls: {
       volume: totalBrickVol.toFixed(2),
       bricksRequired: numBricks
@@ -662,10 +826,60 @@ function calculateMaterialEstimation() {
       volume: totalBlockVol.toFixed(2),
       blocksRequired: numBlocks
     },
+
+    // Mortar for walls
     mortar: {
       totalVolume: totalMortar.toFixed(2),
-      cementBags: bagsCement,
-      sandVolume: sandVol.toFixed(2)
+      cementBags: bagsCementMortar,
+      sandVolume: sandMortar.toFixed(2)
+    },
+
+    // Base concrete
+    base: {
+      volume: totalBaseVolume.toFixed(2),
+      cementBags: bagsCementBase,
+      sandVolume: sandBase.toFixed(2),
+      crushVolume: crushBase.toFixed(2)
+    },
+
+    // Beam
+    beams: {
+      totalLength: beamTotalLength.toFixed(2),
+      volume: beamVolume.toFixed(2),
+      cementBags: bagsCementBeam,
+      sandVolume: sandBeam.toFixed(2),
+      crushVolume: crushBeam.toFixed(2),
+      steelRods: beamSteelRods,
+      rodDiameter: beamRodDiameter
+    },
+
+    // Roof
+    roof: {
+      volume: roofVolume.toFixed(2),
+      cementBags: bagsCementRoof,
+      sandVolume: sandRoof.toFixed(2),
+      crushVolume: crushRoof.toFixed(2),
+      steelRods: roofRodCount,
+      rodDiameter: roofRodDiameter
+    },
+
+    // Floor
+    floor: {
+      area: floorArea.toFixed(2),
+      volume: floorVolume.toFixed(2),
+      cementBags: bagsCementFloor,
+      sandVolume: sandFloor.toFixed(2),
+      crushVolume: crushFloor.toFixed(2),
+      steelRods: floorRodCount,
+      rodDiameter: floorRodDiameter
+    },
+
+    // Totals
+    total: {
+      cementBags: totalCementBags,
+      sandVolume: totalSand.toFixed(2),
+      crushVolume: totalCrush.toFixed(2),
+      steelRods: totalSteelRods
     }
   };
 }

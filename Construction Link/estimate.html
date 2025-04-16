@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Estimation</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #2C3E50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            flex: 1;
+            min-width: 300px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2C3E50;
+        }
+
+        .company-list {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .company-card {
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            padding: 15px;
+            width: calc(50% - 15px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .company-card:hover {
+            transform: translateY(-5px);
+            background-color: #dfe6e9;
+        }
+
+        .company-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-right: 15px;
+            border-radius: 5px;
+            border: 1px solid #bdc3c7;
+            background-color: white;
+            padding: 5px;
+        }
+
+        /* Back Button */
+        .back-button {
+            margin: 20px;
+            padding: 10px 20px;
+            background-color: #2980B9;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        .back-button:hover {
+            background-color: #1f6391;
+        }
+
+        /* Search Bar */
+        #searchBar {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 600px) {
+            .company-card {
+                width: 100%;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .cost-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .cost-table th, .cost-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .cost-table th {
+            background-color: #2C3E50;
+            color: white;
+        }
+
+        .total-cost {
+            text-align: right;
+            font-size: 1.2em;
+            margin-top: 10px;
+            color: #2C3E50;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Material Estimation</h1>
+    </header>
+
+    <button class="back-button" onclick="goBack()">&#8592; Back to Design</button>
+
+    <main>
+        <div class="section" id="estimationSection">
+            <h2>Estimation Details</h2>
+            <div id="estimationContent">
+                <!-- Estimation details will be inserted here -->
+            </div>
+        </div>
+
+        <div class="section" id="companiesSection">
+            <h2>Material Companies</h2>
+            <input type="text" id="searchBar" placeholder="Search companies..." />
+            <ul class="company-list" id="companyList">
+                <!-- Company cards will be dynamically inserted here -->
+            </ul>
+        </div>
+    </main>
+
+    <!-- Modal Structure -->
+    <div id="costModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2>Cost Estimation</h2>
+            <div id="costEstimationContent">
+                <!-- Cost estimation details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to go back to the design page
+        function goBack() {
+            window.location.href = 'CreateDesign.html';
+        }
+
+        // Function to display estimation data
+        function displayEstimation() {
+            const estimationData = JSON.parse(localStorage.getItem('materialEstimation'));
+            const estimationContent = document.getElementById('estimationContent');
+
+            if (!estimationData) {
+                estimationContent.innerHTML = '<p>No estimation data available. Please create a design first.</p>';
+                return;
+            }
+
+            // We'll build a big HTML string to show each section
+            let html = '';
+
+            // ------------------
+            // Design Summary
+            // ------------------
+            html += `
+                <h3>Design Summary</h3>
+                <p><strong>Total Length of Walls:</strong> ${estimationData.totalLength} m</p>
+                <p><strong>Height of Walls:</strong> ${estimationData.height} m</p>
+                <p><strong>Number of Walls:</strong> ${estimationData.numberOfWalls}</p>
+                <hr>
+            `;
+
+            // ------------------
+            // Brick Walls
+            // ------------------
+            if (estimationData.brickWalls) {
+                html += `
+                    <h3>Brick Walls</h3>
+                    <p><strong>Volume:</strong> ${estimationData.brickWalls.volume} m³</p>
+                    <p><strong>Bricks Required:</strong> ${estimationData.brickWalls.bricksRequired}</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Block Walls
+            // ------------------
+            if (estimationData.blockWalls) {
+                html += `
+                    <h3>Block Walls</h3>
+                    <p><strong>Volume:</strong> ${estimationData.blockWalls.volume} m³</p>
+                    <p><strong>Blocks Required:</strong> ${estimationData.blockWalls.blocksRequired}</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Mortar
+            // ------------------
+            if (estimationData.mortar) {
+                html += `
+                    <h3>Mortar</h3>
+                    <p><strong>Total Volume:</strong> ${estimationData.mortar.totalVolume} m³</p>
+                    <p><strong>Bags of Cement (for mortar):</strong> ${estimationData.mortar.cementBags}</p>
+                    <p><strong>Sand (for mortar):</strong> ${estimationData.mortar.sandVolume} m³</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Base
+            // ------------------
+            if (estimationData.base) {
+                html += `
+                    <h3>Base Concrete</h3>
+                    <p><strong>Base Volume:</strong> ${estimationData.base.volume} m³</p>
+                    <p><strong>Bags of Cement (for base):</strong> ${estimationData.base.cementBags}</p>
+                    <p><strong>Sand (for base):</strong> ${estimationData.base.sandVolume} m³</p>
+                    <p><strong>Crushed Stone (for base):</strong> ${estimationData.base.crushVolume} m³</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Beams
+            // ------------------
+            if (estimationData.beams) {
+                html += `
+                    <h3>Beams</h3>
+                    <p><strong>Total Beam Length:</strong> ${estimationData.beams.totalLength} m</p>
+                    <p><strong>Beam Volume:</strong> ${estimationData.beams.volume} m³</p>
+                    <p><strong>Bags of Cement (for beams):</strong> ${estimationData.beams.cementBags}</p>
+                    <p><strong>Sand (for beams):</strong> ${estimationData.beams.sandVolume} m³</p>
+                    <p><strong>Crushed Stone (for beams):</strong> ${estimationData.beams.crushVolume} m³</p>
+                    <p><strong>Steel Rods (for beams):</strong> ${estimationData.beams.steelRods}</p>
+                    <p><strong>Rod Diameter (for beams):</strong> ${estimationData.beams.rodDiameter} mm</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Roof
+            // ------------------
+            if (estimationData.roof) {
+                html += `
+                    <h3>Roof</h3>
+                    <p><strong>Roof Volume:</strong> ${estimationData.roof.volume} m³</p>
+                    <p><strong>Bags of Cement (for roof):</strong> ${estimationData.roof.cementBags}</p>
+                    <p><strong>Sand (for roof):</strong> ${estimationData.roof.sandVolume} m³</p>
+                    <p><strong>Crushed Stone (for roof):</strong> ${estimationData.roof.crushVolume} m³</p>
+                    <p><strong>Steel Rods (for roof):</strong> ${estimationData.roof.steelRods}</p>
+                    <p><strong>Rod Diameter (for roof):</strong> ${estimationData.roof.rodDiameter} mm</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Floor
+            // ------------------
+            if (estimationData.floor) {
+                html += `
+                    <h3>Floor</h3>
+                    <p><strong>Floor Area:</strong> ${estimationData.floor.area} m²</p>
+                    <p><strong>Floor Volume:</strong> ${estimationData.floor.volume} m³</p>
+                    <p><strong>Bags of Cement (for floor):</strong> ${estimationData.floor.cementBags}</p>
+                    <p><strong>Sand (for floor):</strong> ${estimationData.floor.sandVolume} m³</p>
+                    <p><strong>Crushed Stone (for floor):</strong> ${estimationData.floor.crushVolume} m³</p>
+                    <p><strong>Steel Rods (for floor):</strong> ${estimationData.floor.steelRods}</p>
+                    <p><strong>Rod Diameter (for floor):</strong> ${estimationData.floor.rodDiameter} mm</p>
+                    <hr>
+                `;
+            }
+
+            // ------------------
+            // Totals
+            // ------------------
+            if (estimationData.total) {
+                html += `
+                    <h3>Total Materials Required</h3>
+                    <p><strong>Total Cement Bags:</strong> ${estimationData.total.cementBags}</p>
+                    <p><strong>Total Sand:</strong> ${estimationData.total.sandVolume} m³</p>
+                    <p><strong>Total Crushed Stone:</strong> ${estimationData.total.crushVolume} m³</p>
+                    <p><strong>Total Steel Rods:</strong> ${estimationData.total.steelRods}</p>
+                `;
+            }
+
+            estimationContent.innerHTML = html;
+        }
+
+        // Function to fetch and display companies from the backend
+        async function fetchAndDisplayCompanies() {
+            const companyList = document.getElementById('companyList');
+
+            try {
+                const response = await fetch('esti.php');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.error) {
+                    companyList.innerHTML = `<li>${data.error}</li>`;
+                    return;
+                }
+
+                const companies = data.companies;
+
+                if (companies.length === 0) {
+                    companyList.innerHTML = '<li>No companies found.</li>';
+                    return;
+                }
+
+                // Clear any existing content
+                companyList.innerHTML = '';
+
+                // Create company cards
+                companies.forEach(company => {
+                    const li = document.createElement('li');
+
+                    const a = document.createElement('a');
+                    a.href = "#"; // Prevent default navigation
+                    a.className = 'company-card';
+                    a.dataset.providerId = company.id; // Store provider id
+                    a.dataset.companyName = company.companyName; // Store company name
+
+                    const img = document.createElement('img');
+                    img.src = company.companyLogo;
+                    img.alt = `${company.companyName} Logo`;
+                    img.className = 'company-logo';
+
+                    const span = document.createElement('span');
+                    span.textContent = company.companyName;
+
+                    a.appendChild(img);
+                    a.appendChild(span);
+                    li.appendChild(a);
+                    companyList.appendChild(li);
+
+                    // Add click event listener to the company card
+                    a.addEventListener('click', function(event) {
+                        event.preventDefault(); // Prevent default link behavior
+                        showCostEstimation(company.id, company.companyName);
+                    });
+                });
+            } catch (error) {
+                console.error('Error fetching companies:', error);
+                companyList.innerHTML = `<li>Error fetching companies: ${error.message}</li>`;
+            }
+        }
+
+        // Function to handle company search
+        function handleCompanySearch() {
+            const searchInput = document.getElementById('searchBar');
+            const companyList = document.getElementById('companyList');
+
+            searchInput.addEventListener('input', function() {
+                const filter = searchInput.value.toLowerCase();
+                const companies = companyList.getElementsByClassName('company-card');
+
+                Array.from(companies).forEach(company => {
+                    const text = company.textContent || company.innerText;
+                    if (text.toLowerCase().includes(filter)) {
+                        company.parentElement.style.display = 'flex';
+                    } else {
+                        company.parentElement.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Function to show the cost estimation modal
+        async function showCostEstimation(providerId, companyName) {
+            const modal = document.getElementById('costModal');
+            const costContent = document.getElementById('costEstimationContent');
+
+            // Show the modal
+            modal.style.display = 'flex';
+
+            // Fetch materials data from your backend
+            try {
+                const response = await fetch(`get_materials.php?provider_id=${providerId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.error) {
+                    costContent.innerHTML = `<p>${data.error}</p>`;
+                    return;
+                }
+
+                const materials = data.materials;
+                // Get estimation data
+                const estimationData = JSON.parse(localStorage.getItem('materialEstimation'));
+                if (!estimationData) {
+                    costContent.innerHTML = '<p>No estimation data available. Please create a design first.</p>';
+                    return;
+                }
+
+                // Prepare cost estimation
+                const costDetails = [];
+                let totalCost = 0;
+
+                // Helper function to add a line item
+                function addCostDetail(materialName, quantity, unit) {
+                    // For example, user may have materialName "Cement" in DB as "Cement"
+                    // Or "Steel Rods" as "Steel Rods"
+                    // Adjust logic as needed based on your DB
+                    const material = materials.find(m => m.materialName.toLowerCase() === materialName.toLowerCase());
+                    if (material) {
+                        const price = parseFloat(material.price);
+                        const cost = quantity * price;
+                        costDetails.push({
+                            materialName: materialName,
+                            quantity: quantity,
+                            unit: unit,
+                            price: price,
+                            cost: cost.toFixed(2)
+                        });
+                        totalCost += cost;
+                    }
+                }
+
+                // Example usage:  
+                // 1) Brick Walls
+                if (estimationData.brickWalls && parseFloat(estimationData.brickWalls.bricksRequired) > 0) {
+                    addCostDetail('Bricks', parseFloat(estimationData.brickWalls.bricksRequired), 'pieces');
+                }
+                // 2) Block Walls
+                if (estimationData.blockWalls && parseFloat(estimationData.blockWalls.blocksRequired) > 0) {
+                    addCostDetail('Blocks', parseFloat(estimationData.blockWalls.blocksRequired), 'pieces');
+                }
+                // 3) Cement for mortar
+                if (estimationData.mortar && parseFloat(estimationData.mortar.cementBags) > 0) {
+                    addCostDetail('Cement', parseFloat(estimationData.mortar.cementBags), 'bags');
+                }
+                // 4) Sand for mortar
+                if (estimationData.mortar && parseFloat(estimationData.mortar.sandVolume) > 0) {
+                    addCostDetail('Sand', parseFloat(estimationData.mortar.sandVolume), 'm³');
+                }
+                // 5) Base
+                if (estimationData.base && parseFloat(estimationData.base.cementBags) > 0) {
+                    addCostDetail('Cement', parseFloat(estimationData.base.cementBags), 'bags');
+                }
+                if (estimationData.base && parseFloat(estimationData.base.sandVolume) > 0) {
+                    addCostDetail('Sand', parseFloat(estimationData.base.sandVolume), 'm³');
+                }
+                if (estimationData.base && parseFloat(estimationData.base.crushVolume) > 0) {
+                    addCostDetail('Crush', parseFloat(estimationData.base.crushVolume), 'm³');
+                }
+                // 6) Beams
+                if (estimationData.beams && parseFloat(estimationData.beams.cementBags) > 0) {
+                    addCostDetail('Cement', parseFloat(estimationData.beams.cementBags), 'bags');
+                }
+                if (estimationData.beams && parseFloat(estimationData.beams.sandVolume) > 0) {
+                    addCostDetail('Sand', parseFloat(estimationData.beams.sandVolume), 'm³');
+                }
+                if (estimationData.beams && parseFloat(estimationData.beams.crushVolume) > 0) {
+                    addCostDetail('Crush', parseFloat(estimationData.beams.crushVolume), 'm³');
+                }
+                if (estimationData.beams && parseFloat(estimationData.beams.steelRods) > 0) {
+                    addCostDetail('Steel Rods', parseFloat(estimationData.beams.steelRods), 'pieces');
+                }
+                // 7) Roof
+                if (estimationData.roof && parseFloat(estimationData.roof.cementBags) > 0) {
+                    addCostDetail('Cement', parseFloat(estimationData.roof.cementBags), 'bags');
+                }
+                if (estimationData.roof && parseFloat(estimationData.roof.sandVolume) > 0) {
+                    addCostDetail('Sand', parseFloat(estimationData.roof.sandVolume), 'm³');
+                }
+                if (estimationData.roof && parseFloat(estimationData.roof.crushVolume) > 0) {
+                    addCostDetail('Crush', parseFloat(estimationData.roof.crushVolume), 'm³');
+                }
+                if (estimationData.roof && parseFloat(estimationData.roof.steelRods) > 0) {
+                    addCostDetail('Steel Rods', parseFloat(estimationData.roof.steelRods), 'pieces');
+                }
+                // 8) Floor
+                if (estimationData.floor && parseFloat(estimationData.floor.cementBags) > 0) {
+                    addCostDetail('Cement', parseFloat(estimationData.floor.cementBags), 'bags');
+                }
+                if (estimationData.floor && parseFloat(estimationData.floor.sandVolume) > 0) {
+                    addCostDetail('Sand', parseFloat(estimationData.floor.sandVolume), 'm³');
+                }
+                if (estimationData.floor && parseFloat(estimationData.floor.crushVolume) > 0) {
+                    addCostDetail('Crush', parseFloat(estimationData.floor.crushVolume), 'm³');
+                }
+                if (estimationData.floor && parseFloat(estimationData.floor.steelRods) > 0) {
+                    addCostDetail('Steel Rods', parseFloat(estimationData.floor.steelRods), 'pieces');
+                }
+
+                // Display cost estimation
+                if (costDetails.length === 0) {
+                    costContent.innerHTML = '<p>No materials found for cost estimation or database mismatch.</p>';
+                    return;
+                }
+
+                let html = `
+                    <p><strong>Selected Company:</strong> ${companyName}</p>
+                    <table class="cost-table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Quantity</th>
+                                <th>Unit</th>
+                                <th>Price per Unit ($)</th>
+                                <th>Cost ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                costDetails.forEach(item => {
+                    html += `
+                        <tr>
+                            <td>${item.materialName}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.unit}</td>
+                            <td>${item.price.toFixed(2)}</td>
+                            <td>${item.cost}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                    <p class="total-cost"><strong>Total Cost:</strong> $${totalCost.toFixed(2)}</p>
+                `;
+
+                costContent.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error fetching materials:', error);
+                costContent.innerHTML = `<p>Error fetching materials: ${error.message}</p>`;
+            }
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            const modal = document.getElementById('costModal');
+            modal.style.display = 'none';
+            const costContent = document.getElementById('costEstimationContent');
+            costContent.innerHTML = ''; // Clear previous content
+        }
+
+        // Close modal when clicking outside of the modal content
+        window.onclick = function(event) {
+            const modal = document.getElementById('costModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Call the functions on page load
+        window.onload = function() {
+            displayEstimation();
+            fetchAndDisplayCompanies();
+            handleCompanySearch();
+        };
+    </script>
+</body>
+</html>

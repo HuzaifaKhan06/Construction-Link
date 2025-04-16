@@ -65,7 +65,19 @@ function getWallHeight() {
 }
 
 // Constant gap to ensure roof is above beams/columns
-const BEAM_COLUMN_ROOF_GAP = 0.3; // in meters; adjust as needed
+const BEAM_COLUMN_ROOF_GAP = 0.3; // in meters
+
+/**
+ * Helper: compute polygon area via shoelace formula
+ */
+function computePolygonArea(pts) {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  }
+  return Math.abs(area / 2);
+}
 
 /**
  * Create a 3D wall + base as specified.
@@ -222,7 +234,6 @@ const steelRodSelect = document.getElementById('steelRodSelect');
 const roofMarginInput = document.getElementById('roofMarginInput');
 const submitRoofBtn = document.getElementById('submitRoofBtn');
 
-// When Add Roof is clicked, now the submit handler checks for beams.
 document.getElementById('addRoof').addEventListener('click', () => {
   // Do not open roof modal if beams have not been applied.
   if (!window.beamColumnActive) {
@@ -308,6 +319,11 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
   );
   scene.add(roofMesh);
   allMeshes.push(roofMesh);
+
+  // Calculate the roof polygon area so we can store it for accurate volume calc
+  const roofArea = computePolygonArea(shapePoints);
+
+  // Add steel rods at each vertex of the roof polygon
   const rodRadius = (steelRodDiameter / 1000) / 2;
   const rodHeight = thicknessMeters + 0.1;
   const rodGeometry = new THREE.CylinderGeometry(rodRadius, rodRadius, rodHeight, 16);
@@ -322,6 +338,16 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
     allMeshes.push(rodMesh);
   });
   adjustCameraToFitScene();
+
+  // Store roof data globally for estimation
+  window.roofData = {
+    thicknessInches: roofThicknessInches,
+    steelRodDiameter: steelRodDiameter,
+    marginFeet: marginFeet,
+    rodHeight: rodHeight,
+    rodsCount: shapePoints.length,
+    roofArea: roofArea // newly stored area in m²
+  };
 }
 
 // --- Floor Modal and Creation Logic ---
@@ -395,6 +421,15 @@ function createFloor3D(floorThicknessInches) {
   scene.add(floorMesh);
   allMeshes.push(floorMesh);
   adjustCameraToFitScene();
+
+  // Compute floor area from shapePoints (in m²)
+  const floorArea = computePolygonArea(shapePoints);
+
+  // Store floor data globally for estimation
+  window.floorData = {
+    area: floorArea,
+    thicknessInches: floorThicknessInches
+  };
 }
 
 // Helper functions
