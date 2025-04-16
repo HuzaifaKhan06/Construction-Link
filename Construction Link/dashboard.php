@@ -1,39 +1,87 @@
 <?php
 session_start();
 
-// Set header to return JSON responses if needed
-// header('Content-Type: application/json');
-
-// Check if the user is logged in
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['email'])) {
-    header("Location: login.php"); // Redirect to login if not logged in
-    exit();
+if (!isset($_SESSION['user_id'])) {
+  header("Location: Login.php"); // Redirect if not logged in
+  exit();
 }
 
-// Handle the "Switch to Material Provider" action
+$user_id = $_SESSION['user_id'];
+
+// Create database connection
+try {
+  $pdo = new PDO('mysql:host=localhost;dbname=constructionlink', 'root', '');
+  $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+  die("Database connection failed: " . $e->getMessage());
+}
+
+// -----------------------------
+// SWITCH PROFILE LOGIC
+// -----------------------------
+if (isset($_GET['action']) && $_GET['action'] === 'switch_construction') {
+  // Check if the user has a construction company profile
+  $stmt = $pdo->prepare("SELECT COUNT(*) FROM construction_register WHERE user_id = ?");
+  $stmt->execute([$user_id]);
+  $count = $stmt->fetchColumn();
+  if ($count > 0) {
+    header("Location: construction_companies.php");
+    exit;
+  } else {
+    header("Location: construction_register.php");
+    exit;
+  }
+}
+
 if (isset($_GET['action']) && $_GET['action'] === 'switch_material') {
-    try {
-        // Establish database connection
-        $pdo = new PDO('mysql:host=localhost;dbname=constructionlink', 'root', '', [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-        ]);
-
-        // Prepare and execute the query to check registration
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM material_providers WHERE user_id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $isRegistered = $stmt->fetchColumn() > 0;
-
-        if ($isRegistered) {
-            header("Location: MaterialProviders.php"); // Redirect to MaterialProviders.php
-        } else {
-            header("Location: Materialregister.php"); // Redirect to Materialregister.php
-        }
-        exit();
-    } catch (PDOException $e) {
-        // Handle database connection errors
-        echo "Database Error: " . htmlspecialchars($e->getMessage());
-        exit();
+  // Check if the user has a material provider profile
+  try {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM material_providers WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $isRegistered = $stmt->fetchColumn() > 0;
+    if ($isRegistered) {
+      header("Location: MaterialProviders.php");
+      exit();
+    } else {
+      header("Location: Materialregister.php");
+      exit();
     }
+  } catch (PDOException $e) {
+    echo "Database Error: " . htmlspecialchars($e->getMessage());
+    exit();
+  }
+}
+
+// Fetch user details from 'users' table
+try {
+  $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+  $stmt->execute([$user_id]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if ($user) {
+    // Fetch additional profile data if needed
+    $stmt = $pdo->prepare("SELECT * FROM commonusers WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$profile) {
+      // Handle users without a profile in 'commonusers'
+      $profile = [
+        'first_name' => '',
+        'last_name' => '',
+        'username' => $user['email'],  // Use email as username
+        'cnic' => '',
+        'phone_number' => '',
+        'profile_image' => ''
+      ];
+    }
+  } else {
+    echo "<script>alert('User not found.'); window.location.href='Login.php';</script>";
+    exit();
+  }
+} catch (PDOException $e) {
+  echo "Error: " . $e->getMessage();
+  exit();
 }
 
 // Initialize user information variables
@@ -42,43 +90,46 @@ $user_name = "";
 $profile_image = "";
 
 try {
-    // Establish database connection
-    $pdo = new PDO('mysql:host=localhost;dbname=constructionlink', 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+  // Fetch user details from commonusers table
+  $stmt = $pdo->prepare("SELECT first_name, last_name, username, profile_image FROM commonusers WHERE user_id = ?");
+  $stmt->execute([$user_id]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Fetch user details from commonusers table
-    $stmt = $pdo->prepare("SELECT first_name, last_name, username, profile_image FROM commonusers WHERE user_id = ?");
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($user) {
-        if (!empty($user['first_name']) && !empty($user['last_name'])) {
-            $user_name = $user['first_name'] . ' ' . $user['last_name'];
-        } else {
-            $user_name = $user['username'];
-        }
-        $profile_image = $user['profile_image'];
+  if ($user) {
+    if (!empty($user['first_name']) && !empty($user['last_name'])) {
+      $user_name = $user['first_name'] . ' ' . $user['last_name'];
     } else {
-        // Fallback to users table if not found in commonusers
-        $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
-        $stmt->execute([$user_id]);
-        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
-        $user_name = $user_info ? $user_info['email'] : 'User';
+      $user_name = $user['username'];
     }
+    $profile_image = $user['profile_image'];
+  } else {
+    // Fallback to users table if not found in commonusers
+    $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user_name = $user_info ? $user_info['email'] : 'User';
+  }
 
-    // Fetch up to three latest material items from the database
-    $stmt = $pdo->prepare("SELECT * FROM materials ORDER BY id DESC LIMIT 3");
-    $stmt->execute();
-    $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  // Fetch up to three latest material items from the database (for material providers)
+  $stmt = $pdo->prepare("SELECT * FROM materials ORDER BY id DESC LIMIT 3");
+  $stmt->execute();
+  $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // -----------------------------
+  // FETCH CONSTRUCTION WORKS (LIMIT TO 3)
+  // -----------------------------
+  $stmt = $pdo->prepare("SELECT * FROM construction_works ORDER BY id DESC LIMIT 3");
+  $stmt->execute();
+  $works = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    echo "Error: " . htmlspecialchars($e->getMessage());
-    exit();
+  echo "Error: " . htmlspecialchars($e->getMessage());
+  exit();
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -87,78 +138,133 @@ try {
   <link rel="stylesheet" href="./css/DashBoard.css">
   <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css" integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  
-  <!-- Additional CSS for Material Cards -->
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Additional CSS for Cards and "See All" Button -->
   <style>
-    /* Material Card Styles for Dashboard */
+    /* Container for cards with the See All button */
+    .section-cards-container {
+      position: relative;
+    }
+    .material-items,
+    .works-cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+    /* Interactive, professional See All button */
+    .see-all-btn {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      background-color: #2C3E50;
+      border: none;
+      border-radius: 30px;
+      padding: 10px 20px;
+      text-decoration: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      font-size: 1em;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+    .see-all-btn i {
+      margin-right: 8px;
+      font-size: 1.2em;
+      transition: transform 0.3s ease;
+    }
+    .see-all-btn:hover {
+      background-color: #fff;
+      color: #333;
+      border: 1px solid #2C3E50;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      transform: translateY(-50%) scale(1.05);
+    }
+    .see-all-btn:hover i {
+      transform: translateX(3px);
+    }
+    .see-all-btn:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.5);
+    }
+
+    /* Material Card Styles for Dashboard (Material Items & Construction Company Materials) */
     .material-card-dashboard {
-        background-color: #fff;
-        width: 100%;
-        max-width: 300px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        overflow: hidden;
-        text-align: center;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin: 15px;
+      background-color: #fff;
+      width: 100%;
+      max-width: 300px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 15px;
     }
-
     .material-card-dashboard:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     }
-
     .material-card-dashboard img.material-image {
-        width: 100%;
-        height: 180px;
-        object-fit: cover;
-        border-bottom: 1px solid #34495E;
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-bottom: 1px solid #34495E;
     }
-
     .material-info-dashboard {
-        padding: 15px;
-        text-align: left;
-        width: 100%;
+      padding: 15px;
+      text-align: left;
+      width: 100%;
     }
-
     .material-info-dashboard p {
-        margin: 8px 0;
-        font-size: 14px;
-        color: #333;
+      margin: 8px 0;
+      font-size: 14px;
+      color: #333;
     }
-
     .material-info-dashboard p strong {
-        color: #16a085;
+      color: #16a085;
     }
-
-    /* Container for Material Cards */
-    .material-items {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 20px;
-        padding: 20px;
-    }
-
     /* Message when no materials are available */
     .no-materials-message {
-        text-align: center;
-        font-size: 1.2em;
-        color: #555;
-        margin-top: 20px;
+      text-align: center;
+      font-size: 1.2em;
+      color: #555;
+      margin-top: 20px;
     }
-
+    /* Action buttons for cards */
+    .action-buttons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 10px 15px;
+    }
+    .buy-now-button {
+      background-color: #16a085;
+      color: #fff;
+    }
+    .ratings-button {
+      background-color: #34495E;
+      color: #fff;
+    }
     /* Responsive adjustments */
     @media (max-width: 768px) {
-        .material-card-dashboard {
-            max-width: 90%;
-        }
+      .material-card-dashboard {
+        max-width: 90%;
+      }
+      .see-all-btn {
+        right: 10px;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- Navigation Bar -->
@@ -171,8 +277,8 @@ try {
       <li class="dropdown">
         <span class="dropbtn">Switch Profile <i class="fa fa-caret-down"></i></span>
         <div class="dropdown-content">
-          <a href="dashboard.php?action=switch_material">Switch to Material Provider</a>
-          <a href="#">Switch to Construction Company</a>
+          <a href="dashboard.php?action=switch_material" class="border-apply">Switch to Material Provider</a>
+          <a href="dashboard.php?action=switch_construction">Switch to Construction Company</a>
         </div>
       </li>
       <li class="dropdown">
@@ -183,7 +289,7 @@ try {
             <i class="fa-solid fa-user"></i>
           <?php endif; ?>
         </a>
-        <div class="dropdown-content">
+        <div class="dropdown-content sub-content">
           <a href="./EditProfile.php">Edit Profile</a>
           <a href="./Login.php">Logout</a>
         </div>
@@ -200,36 +306,108 @@ try {
   <!-- Material Items Section -->
   <section class="material-items-section">
     <h2 class="material-heading">Material Items</h2>
-    <div class="material-items">
-      <?php if (!empty($materials)): ?>
-        <?php foreach ($materials as $material): ?>
-          <div class="material-card-dashboard">
-            <img src="<?php echo htmlspecialchars($material['image']); ?>" alt="<?php echo htmlspecialchars($material['materialName']); ?>" class="material-image">
-            <div class="material-info-dashboard">
-              <p><strong>Name:</strong> <?php echo htmlspecialchars($material['materialName']); ?></p>
-              <p><strong>Price:</strong> $<?php echo number_format($material['price'], 2); ?></p>
-              <p><strong>Quantity:</strong> <?php echo htmlspecialchars($material['quantity']); ?></p>
-              <p><strong>Material Type:</strong> <?php echo htmlspecialchars($material['materialType']); ?></p>
-              <p><strong>Unit:</strong> <?php echo htmlspecialchars($material['unit']); ?></p>
-              <p><strong>Description:</strong> <?php echo htmlspecialchars($material['description']); ?></p>
+    <div class="section-cards-container">
+      <div class="material-items">
+        <?php if (!empty($materials)): ?>
+          <?php foreach ($materials as $material): ?>
+            <div class="material-card-dashboard" data-id="<?php echo $material['id']; ?>">
+              <img src="<?php echo htmlspecialchars($material['image']); ?>" alt="<?php echo htmlspecialchars($material['materialName']); ?>" class="material-image">
+              <div class="material-info-dashboard">
+                <p><strong>Name:</strong> <?php echo htmlspecialchars($material['materialName']); ?></p>
+                <p><strong>Price:</strong> PKR <?php echo number_format($material['price'], 2); ?></p>
+                <p><strong>Quantity:</strong> <?php echo htmlspecialchars($material['quantity']); ?></p>
+                <p><strong>Unit:</strong> <?php echo htmlspecialchars($material['unit']); ?></p>
+                <p><strong>Description:</strong> <?php echo htmlspecialchars($material['description']); ?></p>
+              </div>
+              <div class="action-buttons">
+                <button class="buy-now-button">Buy Now</button>
+                <button class="ratings-button">Ratings</button>
+              </div>
             </div>
-          </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p class="no-materials-message">No material required now.</p>
-      <?php endif; ?>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <p class="no-materials-message">No material required now.</p>
+        <?php endif; ?>
+      </div>
+      <a href="material_list.php" class="see-all-btn"><i class="bi bi-chevron-right"></i> See All</a>
     </div>
   </section>
 
-  <!-- Construction Companies Section -->
-  <section class="construction-companies">
-      <h2>Construction Companies</h2>
-      <div class="construction-company" id="company1"></div>
-      <div class="construction-company" id="company2"></div>
-      <div class="construction-company" id="company3"></div>
+  <!-- Construction Works Section -->
+  <section class="construction-works-section">
+    <h2 class="construction-heading">Construction Works</h2>
+    <div class="section-cards-container">
+      <div class="works-cards">
+        <?php if (!empty($works)): ?>
+          <?php foreach ($works as $work): ?>
+            <div class="work-card" data-id="<?php echo $work['id']; ?>">
+              <img src="<?php echo htmlspecialchars($work['image']); ?>" alt="<?php echo htmlspecialchars($work['title']); ?>" class="work-image">
+              <div class="work-data">
+                <p><strong>Title:</strong> <?php echo htmlspecialchars($work['title']); ?></p>
+                <p><strong>Type:</strong> <?php echo htmlspecialchars($work['project_type']); ?></p>
+                <p><strong>Description:</strong> <?php echo htmlspecialchars($work['description']); ?></p>
+                <p><strong>Location:</strong> <?php echo htmlspecialchars($work['project_location']); ?></p>
+                <p><strong>Duration:</strong> <?php echo htmlspecialchars($work['start_date']); ?> to <?php echo htmlspecialchars($work['completion_date']); ?></p>
+                <p><strong>Total Area:</strong> <?php echo htmlspecialchars($work['total_area']); ?> sq ft</p>
+                <p><strong>Floors:</strong> <?php echo htmlspecialchars($work['floors']); ?></p>
+                <p><strong>Materials:</strong> <?php echo htmlspecialchars($work['building_materials']); ?></p>
+                <p><strong>Techniques:</strong> <?php echo htmlspecialchars($work['construction_techniques']); ?></p>
+              </div>
+              <div class="action-buttons">
+                <button class="buy-now-button">Hire Now</button>
+                <button class="ratings-button">Ratings</button>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <p style="text-align: center; font-size: 1.2em; color: #555;">No construction works available.</p>
+        <?php endif; ?>
+      </div>
+      <a href="construction_list.php" class="see-all-btn"><i class="bi bi-chevron-right"></i> See All</a>
+    </div>
   </section>
 
-  <!-- JavaScript -->
+  <!-- Construction Companies Material Section -->
+  <?php
+  try {
+    $stmt = $pdo->prepare("SELECT * FROM construction_material ORDER BY id DESC LIMIT 3");
+    $stmt->execute();
+    $companyMaterials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  } catch (PDOException $e) {
+    echo "Error fetching construction company materials: " . htmlspecialchars($e->getMessage());
+    exit();
+  }
+  ?>
+  <section class="construction-companies">
+    <h2>Construction Companies Material</h2>
+    <div class="section-cards-container">
+      <div class="material-items">
+        <?php if (!empty($companyMaterials)): ?>
+          <?php foreach ($companyMaterials as $material): ?>
+            <div class="material-card-dashboard" data-id="<?php echo $material['id']; ?>">
+              <img src="<?php echo htmlspecialchars($material['image']); ?>" alt="<?php echo htmlspecialchars($material['materialName']); ?>" class="material-image">
+              <div class="material-info-dashboard">
+                <p><strong>Name:</strong> <?php echo htmlspecialchars($material['materialName']); ?></p>
+                <p><strong>Price:</strong> PKR <?php echo number_format($material['price'], 2); ?></p>
+                <p><strong>Quantity:</strong> <?php echo htmlspecialchars($material['quantity']); ?></p>
+                <p><strong>Unit:</strong> <?php echo htmlspecialchars($material['unit']); ?></p>
+                <p><strong>Description:</strong> <?php echo htmlspecialchars($material['description']); ?></p>
+              </div>
+              <div class="action-buttons">
+                <button class="buy-now-button">Buy Now</button>
+                <button class="ratings-button">Ratings</button>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <p class="no-materials-message">No construction company material available.</p>
+        <?php endif; ?>
+      </div>
+      <a href="construction_material_list.php" class="see-all-btn"><i class="bi bi-chevron-right"></i> See All</a>
+    </div>
+  </section>
+
+  <!-- JavaScript for Dropdowns and Carousel (if needed) -->
   <script>
     let currentSlide = 0;
     const slides = document.querySelectorAll(".carousel-images img");
@@ -275,4 +453,5 @@ try {
     };
   </script>
 </body>
+
 </html>
