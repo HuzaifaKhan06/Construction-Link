@@ -1,5 +1,3 @@
-// 2d-drawing.js
-
 const canvas = document.getElementById('2d-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -516,7 +514,9 @@ function redraw() {
   drawGridAndWalls();
 }
 
-// Draw door cutout on 2D
+// ---------- Updated Door and Window Cutouts (2D) ----------
+
+// Draw door cutout on both sides of the wall in 2D
 function drawDoorCutout(wall) {
   let fraction;
   switch (wall.door.side) {
@@ -525,20 +525,37 @@ function drawDoorCutout(wall) {
     case 'right': fraction = 0.75; break;
     default: fraction = 0.5;
   }
-  const doorCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
-  const doorCenterY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  // Calculate door center along the wall
+  const midX = wall.x1 + fraction * (wall.x2 - wall.x1);
+  const midY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  // Calculate unit perpendicular vector to the wall
+  const dx = wall.x2 - wall.x1;
+  const dy = wall.y2 - wall.y1;
+  const len = Math.hypot(dx, dy);
+  const ux = -dy / len;
+  const uy = dx / len;
   const doorWidthPx = wall.door.width * PIXELS_PER_METER;
   const doorHeightPx = wall.door.height * PIXELS_PER_METER;
+  // Offset equals half the wall thickness in pixels
+  const offset = (wall.thickness * PIXELS_PER_METER) / 2;
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(doorCenterX - doorWidthPx/2, doorCenterY - doorHeightPx/2, doorWidthPx, doorHeightPx);
+  // Draw door cutout on one side
+  const center1X = midX + ux * offset;
+  const center1Y = midY + uy * offset;
+  ctx.fillRect(center1X - doorWidthPx/2, center1Y - doorHeightPx/2, doorWidthPx, doorHeightPx);
+  // Draw door cutout on the opposite side
+  const center2X = midX - ux * offset;
+  const center2Y = midY - uy * offset;
+  ctx.fillRect(center2X - doorWidthPx/2, center2Y - doorHeightPx/2, doorWidthPx, doorHeightPx);
   ctx.fillStyle = 'white';
   ctx.font = '10px Arial';
-  ctx.fillText('D', doorCenterX - 3, doorCenterY + 3);
+  ctx.fillText('D', center1X - 3, center1Y + 3);
+  ctx.fillText('D', center2X - 3, center2Y + 3);
   ctx.restore();
 }
 
-// Draw window cutout on 2D
+// Draw window cutout on both sides of the wall in 2D
 function drawWindowCutout(wall, win) {
   let fraction;
   switch (win.position) {
@@ -547,20 +564,34 @@ function drawWindowCutout(wall, win) {
     case 'right': fraction = 0.75; break;
     default: fraction = 0.5;
   }
-  const winCenterX = wall.x1 + fraction * (wall.x2 - wall.x1);
-  // For window vertical placement, if position is not explicitly set,
-  // we assume center above the wall's mid-height.
-  const winCenterY = wall.y1 + 0.7 * (wall.y2 - wall.y1);
+  const midX = wall.x1 + fraction * (wall.x2 - wall.x1);
+  const midY = wall.y1 + fraction * (wall.y2 - wall.y1);
+  const dx = wall.x2 - wall.x1;
+  const dy = wall.y2 - wall.y1;
+  const len = Math.hypot(dx, dy);
+  const ux = -dy / len;
+  const uy = dx / len;
   const winWidthPx = win.width * PIXELS_PER_METER;
   const winHeightPx = win.height * PIXELS_PER_METER;
+  const offset = (wall.thickness * PIXELS_PER_METER) / 2;
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(winCenterX - winWidthPx/2, winCenterY - winHeightPx/2, winWidthPx, winHeightPx);
+  // Draw window on one side
+  const center1X = midX + ux * offset;
+  const center1Y = midY + uy * offset;
+  ctx.fillRect(center1X - winWidthPx/2, center1Y - winHeightPx/2, winWidthPx, winHeightPx);
+  // Draw window on the opposite side
+  const center2X = midX - ux * offset;
+  const center2Y = midY - uy * offset;
+  ctx.fillRect(center2X - winWidthPx/2, center2Y - winHeightPx/2, winWidthPx, winHeightPx);
   ctx.fillStyle = 'white';
   ctx.font = '10px Arial';
-  ctx.fillText('W', winCenterX - 3, winCenterY + 3);
+  ctx.fillText('W', center1X - 3, center1Y + 3);
+  ctx.fillText('W', center2X - 3, center2Y + 3);
   ctx.restore();
 }
+
+// ---------- End of Door/Window Cutout Updates ----------
 
 // Buttons / events
 deleteButton.addEventListener('click', () => {
