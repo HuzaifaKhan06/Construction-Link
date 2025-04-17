@@ -617,7 +617,19 @@ estimateBtn.addEventListener('click', () => {
 function handleEstimateMaterials() {
   const data = calculateMaterialEstimation();
   if (!data) return;
+
+  // ✨ **PERSIST DESIGN STATE** ✨
+  const designState = {
+    walls: window.walls,
+    beamColumnActive: window.beamColumnActive,
+    roofData: window.roofData || null,
+    floorData: window.floorData || null
+  };
+  localStorage.setItem('designData', JSON.stringify(designState));
+
+  // existing estimation persistence
   localStorage.setItem('materialEstimation', JSON.stringify(data));
+
   loadingOverlay.style.display = 'flex';
   content.style.filter = 'blur(5px)';
   setTimeout(() => {
@@ -980,4 +992,25 @@ submitWindowBtn.addEventListener('click', () => {
   updateAllWalls();
   pushState();
   windowModal.style.display = 'none';
+});
+//saved design state
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('designData');
+  if (saved) {
+    try {
+      const { walls: w, beamColumnActive: bc, roofData, floorData } = JSON.parse(saved);
+      walls = Array.isArray(w) ? w : [];
+      window.walls = walls;
+      beamColumnActive = !!bc;
+      window.beamColumnActive = beamColumnActive;
+      if (roofData) window.roofData = roofData;
+      if (floorData) window.floorData = floorData;
+
+      // Redraw 2D and rebuild 3D
+      redraw();
+      updateAllWalls();
+    } catch (e) {
+      console.warn('Failed to restore design state:', e);
+    }
+  }
 });
