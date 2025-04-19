@@ -274,6 +274,15 @@ submitRoofBtn.addEventListener('click', () => {
  * by adding a vertical gap (BEAM_COLUMN_ROOF_GAP).
  */
 function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
+  // ▶▶ ADDED ▶▶ Store roofData globally so 2D script can include it in session
+  window.roofData = {
+    thicknessInches: roofThicknessInches,
+    steelRodDiameter: steelRodDiameter,
+    marginFeet: marginFeet,
+    rodHeight: rodHeight,
+    rodsCount: shapePoints.length,
+    roofArea: roofArea
+  };
   const uniquePoints = [];
   window.walls.forEach(w => {
     const p1 = { x: w.x1, y: w.y1 };
@@ -380,6 +389,10 @@ submitFloorBtn.addEventListener('click', () => {
  * Creates the floor exactly within the polygon from the walls (no extra margin).
  */
 function createFloor3D(floorThicknessInches) {
+  window.floorData = {
+    area: floorArea,
+    thicknessInches: floorThicknessInches
+  };
   const uniquePoints = [];
   window.walls.forEach(w => {
     const p1 = { x: w.x1, y: w.y1 };
@@ -431,6 +444,9 @@ function createFloor3D(floorThicknessInches) {
     thicknessInches: floorThicknessInches
   };
 }
+// ▶▶ ADDED ▶▶ Expose these to 2D script for restoration
+window.createRoof3D = createRoof3D;
+window.createFloor3D = createFloor3D;
 
 // Helper functions
 function addUniquePoint(arr, p) {

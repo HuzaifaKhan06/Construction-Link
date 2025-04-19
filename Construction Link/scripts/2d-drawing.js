@@ -615,21 +615,17 @@ estimateBtn.addEventListener('click', () => {
   handleEstimateMaterials();
 });
 function handleEstimateMaterials() {
+// ▶▶ ADDED ▶▶ save full design state (2D + beam/roof/floor) in sessionStorage
+sessionStorage.setItem('designData', JSON.stringify({
+  walls: walls,
+  beamColumnActive: beamColumnActive,
+  roofData: window.roofData || null,
+  floorData: window.floorData || null
+}));
+
   const data = calculateMaterialEstimation();
   if (!data) return;
-
-  // ✨ **PERSIST DESIGN STATE** ✨
-  const designState = {
-    walls: window.walls,
-    beamColumnActive: window.beamColumnActive,
-    roofData: window.roofData || null,
-    floorData: window.floorData || null
-  };
-  localStorage.setItem('designData', JSON.stringify(designState));
-
-  // existing estimation persistence
   localStorage.setItem('materialEstimation', JSON.stringify(data));
-
   loadingOverlay.style.display = 'flex';
   content.style.filter = 'blur(5px)';
   setTimeout(() => {
@@ -993,24 +989,43 @@ submitWindowBtn.addEventListener('click', () => {
   pushState();
   windowModal.style.display = 'none';
 });
-//saved design state
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('designData');
-  if (saved) {
-    try {
-      const { walls: w, beamColumnActive: bc, roofData, floorData } = JSON.parse(saved);
-      walls = Array.isArray(w) ? w : [];
-      window.walls = walls;
-      beamColumnActive = !!bc;
-      window.beamColumnActive = beamColumnActive;
-      if (roofData) window.roofData = roofData;
-      if (floorData) window.floorData = floorData;
 
-      // Redraw 2D and rebuild 3D
-      redraw();
-      updateAllWalls();
-    } catch (e) {
-      console.warn('Failed to restore design state:', e);
+
+// ▶▶ ADDED ▶▶ Restore design from sessionStorage on load
+function restoreDesign() {
+  const saved = sessionStorage.getItem('designData');
+  if (!saved) return;
+  try {
+    const design = JSON.parse(saved);
+    // 2D state
+    walls = design.walls || [];
+    window.walls = walls;
+    // beam/column
+    beamColumnActive = design.beamColumnActive;
+    window.beamColumnActive = beamColumnActive;
+    // roof & floor
+    window.roofData = design.roofData || null;
+    window.floorData = design.floorData || null;
+
+    // redraw 2D view
+    redraw();
+    // dispatch to 3D
+    updateAllWalls();
+    // roof
+    if (design.roofData && window.createRoof3D) {
+      window.createRoof3D(
+        design.roofData.thicknessInches,
+        design.roofData.steelRodDiameter,
+        design.roofData.marginFeet
+      );
     }
+    // floor
+    if (design.floorData && window.createFloor3D) {
+      window.createFloor3D(design.floorData.thicknessInches);
+    }
+  } catch (err) {
+    console.error('▶▶ ADDED ▶▶ failed to restore design:', err);
   }
-});
+}
+document.addEventListener('DOMContentLoaded', restoreDesign);
+
