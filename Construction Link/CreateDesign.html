@@ -32,13 +32,21 @@
       overflow-y: auto;
     }
 
-    .sidebar img {
-      border-radius: 50%;
-      width: 80px;
-      height: 80px;
-      margin-bottom: 20px;
-    }
-
+    .sidebar-btn {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: none;
+  border-radius: 5px;
+  background-color: #27ae60;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.sidebar-btn:hover {
+  background-color: #219150;
+}
     .sidebar input, .sidebar button, .sidebar select {
       width: 100%;
       margin-bottom: 10px;
@@ -298,7 +306,9 @@
 <body>
   <div id="content">
     <div class="sidebar">
-      <img src="imgs/LogoL.webp" alt="Logo" />
+      <button id="newProjectBtn" class="sidebar-btn">+ New Project</button>
+<button id="savedProjectsBtn" class="sidebar-btn">💾 Saved Projects</button>
+<button id="exportProjectBtn" class="sidebar-btn">⤓ Export Project</button>
 
       <!-- Input for wall height -->
       <input type="number" id="wallHeight" placeholder="Height" min="0" />
@@ -468,6 +478,40 @@
       <button id="submitFloorBtn">Add Floor</button>
     </div>
   </div>
+
+  <div id="newProjectModal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="newProjectModal">&times;</span>
+      <h2>Create New Project</h2>
+      <input type="text" id="newProjectName" placeholder="Project Name" />
+      <button id="createProjectStart">Start</button>
+    </div>
+  </div>
+  
+  <!-- Saved Projects Modal -->
+  <div id="savedProjectsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="savedProjectsModal">&times;</span>
+      <h2>Saved Projects</h2>
+      <ul id="projectsList">
+        <!-- populated dynamically -->
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Export Project Modal -->
+  <div id="exportProjectModal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="exportProjectModal">&times;</span>
+      <h2>Export Project</h2>
+      <button id="exportSave">Save Project</button>
+      <button id="exportJPG">Export as JPG</button>
+      <button id="exportPDF">Export as PDF</button>
+    </div>
+  </div>
+  
+  <!-- Include the projects.js after your other scripts -->
+  <script src="./scripts/projects.js"></script>
 
   <script type="module" src="./scripts/2d-drawing.js"></script>
   <script type="module" src="./scripts/3d-rendering.js"></script>
