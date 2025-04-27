@@ -1,49 +1,45 @@
 const express = require('express');
 const passport = require('passport');
-const session = require('express-session');  // Import express-session
+const session = require('express-session');
 const cors = require('cors');
-const authRoutes = require('./routes/auth');
-const PORT = process.env.PORT || 3000;
-
-require('./passport');
 require('dotenv').config();
+require('./passport');
 
-const app = express();
+const authRoutes    = require('./routes/auth');
+const projectRoutes = require('./routes/projects');
 
-// Enable CORS for all origins
+const PORT = process.env.PORT || 3000;
+const app  = express();
+
+// Middlewares
 app.use(cors());
-
-// Set up express-session for managing sessions
+app.use(express.json());
 app.use(session({
-  secret: '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',  // Secret key for session encryption
-  resave: false,              // Don't resave the session if it wasn't modified
-  saveUninitialized: true,    // Save uninitialized sessions
-  cookie: { secure: false }   // Set 'secure: true' if using HTTPS (For development use false)
+  secret: process.env.SESSION_SECRET || 'dev-secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }
 }));
-
-// Initialize passport
 app.use(passport.initialize());
-app.use(passport.session());clear
+app.use(passport.session());
 
-// Set up routes
+// Auth
 app.use('/auth', authRoutes);
 
-// Home route with Google login link
+// Projects API
+app.use('/api/projects', projectRoutes);
+
+// Frontend fallback or home
 app.get('/', (req, res) => {
   res.send('<h1>Welcome! <a href="/auth/google">Sign in with Google</a></h1>');
 });
 
-// Dashboard route after successful authentication
 app.get('/dashboard.php', (req, res) => {
-  if (!req.user) {
-    return res.redirect('/');
-  }
-
-  // Redirect to your PHP page (e.g., dashboard.php)
+  if (!req.user) return res.redirect('/');
   res.redirect('http://localhost:8080/Projects/Construction%20Link/signup_login_php_prac/dashboard.php');
 });
 
-// Start the server
+// Start
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });

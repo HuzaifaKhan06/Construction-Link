@@ -1029,3 +1029,28 @@ function restoreDesign() {
 }
 document.addEventListener('DOMContentLoaded', restoreDesign);
 
+// ▶▶ NEW ▶▶ Load saved design into the local walls array
+function loadDesign(data) {
+  // 1) Replace the local `walls` array contents
+  walls.length = 0;
+  if (Array.isArray(data.walls)) {
+    data.walls.forEach(w => walls.push(w));
+  }
+
+  // 2) Sync flags and extra data
+  beamColumnActive = data.beamColumnActive || false;
+  window.beamColumnActive = beamColumnActive;
+  window.roofData  = data.roofData  || null;
+  window.floorData = data.floorData || null;
+
+  // 3) Redraw 2D and notify 3D
+  redraw();
+  updateAllWalls();
+}
+
+// ▶▶ NEW ▶▶ Expose it so the loader can call it
+window.loadDesign       = loadDesign;
+
+// ▶▶ ENSURE THESE EXIST ▶▶ expose your redraw/update functions
+window.redraw           = redraw;
+window.updateAllWalls   = updateAllWalls;
