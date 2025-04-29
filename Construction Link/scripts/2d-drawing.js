@@ -1054,3 +1054,12 @@ window.loadDesign       = loadDesign;
 // ▶▶ ENSURE THESE EXIST ▶▶ expose your redraw/update functions
 window.redraw           = redraw;
 window.updateAllWalls   = updateAllWalls;
+
+// ▶▶ NEW ▶▶ Wipe 2D canvas
+window.clear2D = function() {
+  walls.length = 0;
+  window.walls = walls;
+  undoStack.length = 0;
+  pushState();
+  redraw();
+};

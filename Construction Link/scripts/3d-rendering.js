@@ -522,3 +522,32 @@ function animate() {
 animate();
 window.createRoof3D   = createRoof3D;
 window.createFloor3D  = createFloor3D;
+
+
+// ▶▶ NEW ▶▶ Wipe 3D scene
+window.clear3D = function() {
+  // remove & dispose all meshes
+  allMeshes.forEach(m => {
+    scene.remove(m);
+    m.geometry.dispose();
+    if (m.material.map) m.material.map.dispose();
+    m.material.dispose();
+  });
+  allMeshes.length = 0;
+
+  // remove beam/column group
+  if (beamColumnGroup.parent) {
+    scene.remove(beamColumnGroup);
+    beamColumnGroup.traverse(c => {
+      if (c.isMesh) {
+        c.geometry.dispose();
+        c.material.dispose();
+      }
+    });
+  }
+  beamColumnGroup = new THREE.Group();
+
+  // reset roof/floor data
+  window.roofData = null;
+  window.floorData = null;
+};
