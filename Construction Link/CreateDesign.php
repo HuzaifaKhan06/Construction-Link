@@ -1,3 +1,33 @@
+
+<?php
+session_start();
+
+// If they’ve just come from the design page, kill off the design session.
+if (isset($_GET['from_design']) && $_GET['from_design'] == '1') {
+    session_unset();
+    session_destroy();
+    header('Location: Login.php');
+    exit();
+}
+
+// Inactivity timeout (15 min)
+$timeout = 900;
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout) {
+    session_unset();
+    session_destroy();
+    header('Location: Login.php');
+    exit();
+}
+$_SESSION['LAST_ACTIVITY'] = time();
+
+// Login guard
+if (!isset($_SESSION['user_id'])) {
+    header('Location: Login.php');
+    exit();
+}
+$userId = $_SESSION['user_id'];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -297,6 +327,10 @@
   </style>
 </head>
 <body>
+<script>
+    // Inject the PHP session user_id into JS
+    window.USER_ID = <?php echo json_encode($userId, JSON_NUMERIC_CHECK); ?>;
+  </script>
   <div id="content">
     <div class="sidebar">
       
@@ -508,5 +542,6 @@
   <script type="module" src="./scripts/2d-drawing.js"></script>
   <script type="module" src="./scripts/3d-rendering.js"></script>
   <script src="./scripts/project-management.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>

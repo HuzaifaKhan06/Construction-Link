@@ -15,7 +15,9 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 15, 50);
 camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+ // force a white background instead of the default black
+renderer.setClearColor(0xffffff, 1);
 renderer.setSize(window.innerWidth, window.innerHeight / 2);
 document.getElementById('threejs-canvas').appendChild(renderer.domElement);
 
