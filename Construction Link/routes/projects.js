@@ -1,6 +1,6 @@
-const express    = require('express');
+const express = require('express');
 const connection = require('../db');
-const router     = express.Router();
+const router = express.Router();
 
 router.use(express.json());
 
@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
     return res.status(400).json({ error: 'user_id query parameter required' });
   }
   connection.query(
-    'SELECT id, name, created_at, updated_at FROM projects WHERE user_id = ? ORDER BY updated_at DESC',
+    'SELECT id, name, thumbnail, created_at, updated_at FROM projects WHERE user_id = ? ORDER BY updated_at DESC',
     [ user_id ],
     (err, rows) => {
       if (err) {
@@ -44,13 +44,13 @@ router.get('/', (req, res) => {
 
 // GET /api/projects/:id?user_id=… — fetch one project, only if owned
 router.get('/:id', (req, res) => {
-  const { id }      = req.params;
-  const user_id     = req.query.user_id;
+  const { id } = req.params;
+  const user_id = req.query.user_id;
   if (!user_id) {
     return res.status(400).json({ error: 'user_id query parameter required' });
   }
   connection.query(
-    'SELECT id, name, json_data FROM projects WHERE id = ? AND user_id = ?',
+    'SELECT id, name, json_data, thumbnail FROM projects WHERE id = ? AND user_id = ?',
     [ id, user_id ],
     (err, rows) => {
       if (err) {
@@ -65,33 +65,82 @@ router.get('/:id', (req, res) => {
   );
 });
 
+// DELETE /api/projects/:id?user_id=... — delete project, only if owned
+router.delete('/:id', (req, res) => {
+  const { id } = req.params;
+  const user_id = req.query.user_id;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id query parameter required' });
+  }
+  
+  connection.query(
+    'DELETE FROM projects WHERE id = ? AND user_id = ?',
+    [id, user_id],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Project not found or not yours' });
+      }
+      
+      res.json({ message: 'Project deleted successfully' });
+    }
+  );
+});
+
 // PUT /api/projects/:id — update project JSON, only if owned
 router.put('/:id', (req, res) => {
-  const { id }        = req.params;
-  const { json_data, user_id } = req.body;
+  const { id } = req.params;
+  const { json_data, user_id, thumbnail } = req.body;
+  
   if (json_data === undefined || !user_id) {
     return res.status(400).json({ error: 'json_data and user_id required' });
   }
+  
   let jsonString;
   try {
     jsonString = JSON.stringify(json_data);
   } catch (e) {
     return res.status(400).json({ error: 'Invalid JSON data' });
   }
-  connection.query(
-    'UPDATE projects SET json_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
-    [ jsonString, id, user_id ],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Database error' });
+  
+  // If thumbnail is provided, update with thumbnail
+  if (thumbnail) {
+    connection.query(
+      'UPDATE projects SET json_data = ?, thumbnail = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+      [jsonString, thumbnail, id, user_id],
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Project not found or not yours' });
+        }
+        res.json({ message: 'Project updated with thumbnail' });
       }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Project not found or not yours' });
+    );
+  } else {
+    // No thumbnail, just update json_data
+    connection.query(
+      'UPDATE projects SET json_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+      [jsonString, id, user_id],
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Project not found or not yours' });
+        }
+        res.json({ message: 'Project updated' });
       }
-      res.json({ message: 'Project updated' });
-    }
-  );
+    );
+  }
 });
 
 module.exports = router;

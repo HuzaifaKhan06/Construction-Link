@@ -15,9 +15,7 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 15, 50);
 camera.lookAt(0, 0, 0);
 
- const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
- // force a white background instead of the default black
-renderer.setClearColor(0xffffff, 1);
+const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight / 2);
 document.getElementById('threejs-canvas').appendChild(renderer.domElement);
 
@@ -37,6 +35,72 @@ scene.add(dirLight);
 
 // Keep track of all wall/base/roof/door/window/floor meshes
 const allMeshes = [];
+
+/**
+ * Toast notification system
+ */
+const toastSystem = {
+  container: null,
+  init: function() {
+    // Create toast container if it doesn't exist
+    if (!this.container) {
+      this.container = document.createElement('div');
+      this.container.className = 'toast-container';
+      this.container.style.position = 'fixed';
+      this.container.style.top = '20px';
+      this.container.style.right = '20px';
+      this.container.style.zIndex = '9999';
+      document.body.appendChild(this.container);
+    }
+  },
+  show: function(message, type = 'info', duration = 3000) {
+    this.init();
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.minWidth = '250px';
+    toast.style.margin = '10px';
+    toast.style.padding = '15px';
+    toast.style.borderRadius = '4px';
+    toast.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+    toast.style.backgroundColor = type === 'error' ? '#f44336' : 
+                                 type === 'warning' ? '#ff9800' : 
+                                 type === 'success' ? '#4CAF50' : '#2196F3';
+    toast.style.color = '#fff';
+    toast.style.transition = 'all 0.3s ease';
+    toast.style.opacity = '0';
+    toast.textContent = message;
+    
+    // Add toast to container
+    this.container.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => {
+      toast.style.opacity = '1';
+    }, 10);
+    
+    // Remove toast after duration
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        this.container.removeChild(toast);
+      }, 300);
+    }, duration);
+  },
+  error: function(message, duration = 3000) {
+    this.show(message, 'error', duration);
+  },
+  warning: function(message, duration = 3000) {
+    this.show(message, 'warning', duration);
+  },
+  success: function(message, duration = 3000) {
+    this.show(message, 'success', duration);
+  },
+  info: function(message, duration = 3000) {
+    this.show(message, 'info', duration);
+  }
+};
 
 /**
  * Auto-adjust the camera so we can see everything.
@@ -239,11 +303,11 @@ const submitRoofBtn = document.getElementById('submitRoofBtn');
 document.getElementById('addRoof').addEventListener('click', () => {
   // Do not open roof modal if beams have not been applied.
   if (!window.beamColumnActive) {
-    alert("Please add beams and columns first.");
+    toastSystem.error("Please add beams and columns first.");
     return;
   }
   if (!window.walls || window.walls.length < 2) {
-    alert("Please make at least 2 walls.");
+    toastSystem.error("Please make at least 2 walls.");
     return;
   }
   roofModal.style.display = 'block';
@@ -253,21 +317,22 @@ closeRoofModal.addEventListener('click', () => {
 });
 submitRoofBtn.addEventListener('click', () => {
   if (!window.beamColumnActive) {
-    alert("Please add beams and columns first.");
+    toastSystem.error("Please add beams and columns first.");
     return;
   }
   const roofThicknessInches = parseFloat(roofWidthInput.value);
   if (isNaN(roofThicknessInches) || roofThicknessInches <= 0) {
-    alert("Please enter a valid roof thickness in inches.");
+    toastSystem.error("Please enter a valid roof thickness in inches.");
     return;
   }
   const steelRodDiameter = parseFloat(steelRodSelect.value);
   if (isNaN(steelRodDiameter) || steelRodDiameter <= 0) {
-    alert("Please select a valid steel rod diameter.");
+    toastSystem.error("Please select a valid steel rod diameter.");
     return;
   }
   const marginFeet = parseFloat(roofMarginInput.value) || 0;
   createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet);
+  toastSystem.success("Roof added successfully.");
   roofModal.style.display = 'none';
 });
 
@@ -360,7 +425,7 @@ const submitFloorBtn = document.getElementById('submitFloorBtn');
 
 document.getElementById('addFloor').addEventListener('click', () => {
   if (!window.walls || window.walls.length === 0) {
-    alert("Please create walls first.");
+    toastSystem.error("Please create walls first.");
     return;
   }
   floorModal.style.display = 'block';
@@ -371,10 +436,11 @@ closeFloorModal.addEventListener('click', () => {
 submitFloorBtn.addEventListener('click', () => {
   const floorThicknessInches = parseFloat(floorThicknessInput.value);
   if (isNaN(floorThicknessInches) || floorThicknessInches <= 0) {
-    alert("Please enter a valid floor thickness in inches.");
+    toastSystem.error("Please enter a valid floor thickness in inches.");
     return;
   }
   createFloor3D(floorThicknessInches);
+  toastSystem.success("Floor added successfully.");
   floorModal.style.display = 'none';
 });
 
@@ -552,4 +618,8 @@ window.clear3D = function() {
   // reset roof/floor data
   window.roofData = null;
   window.floorData = null;
+  
 };
+
+// Initialize the toast system
+toastSystem.init();

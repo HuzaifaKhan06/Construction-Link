@@ -1,8 +1,7 @@
-
 <?php
 session_start();
 
-// If they’ve just come from the design page, kill off the design session.
+// If they've just come from the design page, kill off the design session.
 if (isset($_GET['from_design']) && $_GET['from_design'] == '1') {
     session_unset();
     session_destroy();
@@ -51,37 +50,35 @@ $userId = $_SESSION['user_id'];
     }
 
     .sidebar {
-      width: 200px;
+      width: 220px; /* Slightly wider sidebar */
       background-color: #2C3E50;
-      padding: 20px;
+      padding: 15px; /* More padding */
       box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      overflow-y: auto;
-    }
-
-    
-   
-
-    /* New Modals */
-    .project-modal .modal-content {
-      width: 300px;
+      height: 100vh;
+      overflow: hidden;
     }
 
     .sidebar input, .sidebar button, .sidebar select {
       width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
       border: none;
       border-radius: 5px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .sidebar input {
       background-color: #ecf0f1;
       color: #2C3E50;
+      height: 20px; /* Slightly taller */
+      padding: 6px;
+    }
+
+    .sidebar select {
+      background-color: #ffffff;
+      color: #2C3E50;
+      height: 32px; /* Slightly taller */
+      padding: 3px 6px;
     }
 
     .sidebar button {
@@ -89,19 +86,64 @@ $userId = $_SESSION['user_id'];
       color: white;
       cursor: pointer;
       transition: background-color 0.2s;
+      height: 30px; /* Taller buttons */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+      font-weight: 500;
     }
+    
     .sidebar button:hover {
       background-color: #d35400;
     }
+    
     .sidebar button.selected {
       background-color: #2980B9;
     }
 
-    /* Container for buttons with its own scroll bar */
-    #sidebar-buttons {
+    /* Top buttons styling */
+    .top-buttons {
+      margin-bottom: 12px; /* Increased spacing */
+    }
+    
+    .top-buttons button {
+      margin-bottom: 8px; /* Increased spacing between buttons */
+    }
+
+    /* Form group styling */
+    .form-group {
+      margin-bottom: 12px; /* Increased spacing between groups */
+    }
+
+    /* Unit row layout */
+    .unit-row {
+      display: flex;
+      gap: 8px; /* Increased gap */
+      margin-bottom: 8px; /* Added spacing */
+    }
+
+    .unit-row input {
+      flex: 1;
+    }
+
+    .unit-row select {
+      width: 85px; /* Slightly wider */
+    }
+
+    /* Grid layout for action buttons */
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px; /* Increased gap */
       width: 100%;
-      max-height: 400px;
-      overflow-y: auto;
+      margin-top: 12px; /* Increased top margin */
+    }
+
+    /* Full width buttons */
+    .full-width {
+      grid-column: span 2;
+      margin-bottom: 4px; /* Space between full-width buttons */
     }
 
     .main {
@@ -109,28 +151,26 @@ $userId = $_SESSION['user_id'];
       display: flex;
       flex-direction: column;
     }
+    
     .canvas-container {
       flex: 1;
       display: flex;
       flex-direction: column;
     }
+    
     #2d-canvas {
       width: 100%;
       height: 50%;
       background-color: white;
       border-bottom: 2px solid #ecf0f1;
     }
+    
     #threejs-canvas {
       width: 100%;
       height: 50%;
       background-color: white;
     }
 
-    .extra-buttons {
-      display: flex;
-      flex-direction: column;
-      margin-top: 8px;
-    }
     .delete-button {
       position: absolute;
       width: 20px;
@@ -143,6 +183,7 @@ $userId = $_SESSION['user_id'];
       display: none;
       z-index: 1000;
     }
+    
     .endpoint {
       width: 10px;
       height: 10px;
@@ -152,6 +193,7 @@ $userId = $_SESSION['user_id'];
       display: none;
       z-index: 1000;
     }
+    
     .three-dots-button {
       position: absolute;
       width: 30px;
@@ -178,16 +220,19 @@ $userId = $_SESSION['user_id'];
       width: 150px;
       z-index: 999;
     }
+    
     #lengthForm label {
       font-size: 12px;
       margin-right: 5px;
     }
+    
     #lengthForm input, #lengthForm select {
       width: 100%;
       margin-bottom: 8px;
       padding: 5px;
       box-sizing: border-box;
     }
+    
     #lengthForm button {
       background-color: #e67e22;
       color: white;
@@ -197,6 +242,7 @@ $userId = $_SESSION['user_id'];
       width: 100%;
       padding: 5px;
     }
+    
     #lengthForm button:hover {
       background-color: #d35400;
     }
@@ -217,6 +263,7 @@ $userId = $_SESSION['user_id'];
       min-width: 300px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
+    
     #customAlert .close-btn {
       position: absolute;
       top: 5px;
@@ -227,6 +274,7 @@ $userId = $_SESSION['user_id'];
       cursor: pointer;
       color: #a94442;
     }
+    
     #customAlert p {
       margin: 0;
       padding-right: 20px;
@@ -245,6 +293,7 @@ $userId = $_SESSION['user_id'];
       justify-content: center;
       z-index: 2000;
     }
+    
     #loadingOverlay img {
       width: 100px;
       height: 100px;
@@ -262,6 +311,7 @@ $userId = $_SESSION['user_id'];
       overflow: auto;
       background: rgba(0, 0, 0, 0.5);
     }
+    
     .modal-content {
       background-color: #ffffff;
       margin: 10% auto;
@@ -272,18 +322,21 @@ $userId = $_SESSION['user_id'];
       position: relative;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+    
     .modal-content h2 {
       margin-top: 0;
       text-align: center;
       color: #333;
       font-weight: 600;
     }
+    
     .modal-content label {
       display: block;
       margin-top: 15px;
       color: #555;
       font-size: 14px;
     }
+    
     .modal-content input,
     .modal-content select {
       width: 100%;
@@ -294,6 +347,7 @@ $userId = $_SESSION['user_id'];
       font-size: 14px;
       box-sizing: border-box;
     }
+    
     .modal-content button {
       width: 100%;
       padding: 10px;
@@ -306,9 +360,11 @@ $userId = $_SESSION['user_id'];
       cursor: pointer;
       transition: background-color 0.3s;
     }
+    
     .modal-content button:hover {
       background-color: #1F6391;
     }
+    
     .close {
       position: absolute;
       top: 12px;
@@ -319,10 +375,15 @@ $userId = $_SESSION['user_id'];
       cursor: pointer;
       transition: color 0.2s;
     }
+    
     .close:hover,
     .close:focus {
       color: #000;
       text-decoration: none;
+    }
+    
+    .project-modal .modal-content {
+      width: 300px;
     }
   </style>
 </head>
@@ -333,59 +394,72 @@ $userId = $_SESSION['user_id'];
   </script>
   <div id="content">
     <div class="sidebar">
-      
+      <!-- Project buttons -->
+      <div class="top-buttons">
         <button id="btnNewProject">+ New Project</button>
         <button id="btnSavedProjects">Saved Projects</button>
         <button id="btnExport">Export</button>
+      </div>
       
-
-      <!-- Input for wall height -->
-      <input type="number" id="wallHeight" placeholder="Height" min="0" />
-      <select id="heightUnit">
-        <option value="m">Meter</option>
-        <option value="ft">Foot</option>
-      </select>
-
-      <!-- Select for wall thickness -->
-      <select id="wallWidth">
-        <option value="4in_brick" data-wall-type="brick">04 Inch Brick Wall</option>
-        <option value="9in_brick" data-wall-type="brick">09 Inch Brick Wall</option>
-        <option value="13in_brick" data-wall-type="brick">13 Inch Brick Wall</option>
-        <option value="18in_brick" data-wall-type="brick">18 Inch Brick Wall</option>
-        <option value="8in_block" data-wall-type="block">08 Inch Block Wall</option>
-        <option value="18in_block" data-wall-type="block">18 Inch Block Wall</option>
-        <option value="27in_block" data-wall-type="block">27 Inch Block Wall</option>
-      </select>
-
-      <!-- Select for wall base -->
-      <select id="baseWidth">
-        <option value="4in_brick" data-wall-type="brick">04 Inch Brick Base</option>
-        <option value="9in_brick" data-wall-type="brick">09 Inch Brick Base</option>
-        <option value="13in_brick" data-wall-type="brick">13 Inch Brick Base</option>
-        <option value="18in_brick" data-wall-type="brick">18 Inch Brick Base</option>
-        <option value="8in_block" data-wall-type="block">08 Inch Block Base</option>
-        <option value="18in_block" data-wall-type="block">18 Inch Block Base</option>
-        <option value="27in_block" data-wall-type="block">27 Inch Block Base</option>
-      </select>
-
-      <input type="number" id="baseDepth" placeholder="Depth" min="0" />
-      <select id="depthUnit">
-        <option value="m">Meter</option>
-        <option value="ft">Foot</option>
-      </select>
-
-      <div id="sidebar-buttons">
-        <button id="addRoof">Add Roof</button>
-        <button id="beamColumn">Beam & Column</button>
-        <div class="extra-buttons">
-          <button id="brickWall">Brick Wall</button>
-          <button id="blockWall">Block Wall</button>
-          <button id="updateWalls">Update Walls</button>
-          <button id="estimateMaterials">Estimate Materials</button>
-          <button id="addDoor">Add Door</button>
-          <button id="addWindow">Add Window</button>
-          <button id="addFloor">Add Floor</button>
+      <!-- Height input group -->
+      <div class="form-group">
+        <div class="unit-row">
+          <input type="number" id="wallHeight" placeholder="Height" min="0" />
+          <select id="heightUnit">
+            <option value="m">Meter</option>
+            <option value="ft">Foot</option>
+          </select>
         </div>
+      </div>
+
+      <!-- Wall thickness -->
+      <div class="form-group">
+        <select id="wallWidth">
+          <option value="4in_brick" data-wall-type="brick">04 Inch Brick Wall</option>
+          <option value="9in_brick" data-wall-type="brick">09 Inch Brick Wall</option>
+          <option value="13in_brick" data-wall-type="brick">13 Inch Brick Wall</option>
+          <option value="18in_brick" data-wall-type="brick">18 Inch Brick Wall</option>
+          <option value="8in_block" data-wall-type="block">08 Inch Block Wall</option>
+          <option value="18in_block" data-wall-type="block">18 Inch Block Wall</option>
+          <option value="27in_block" data-wall-type="block">27 Inch Block Wall</option>
+        </select>
+      </div>
+
+      <!-- Wall base -->
+      <div class="form-group">
+        <select id="baseWidth">
+          <option value="4in_brick" data-wall-type="brick">04 Inch Brick Base</option>
+          <option value="9in_brick" data-wall-type="brick">09 Inch Brick Base</option>
+          <option value="13in_brick" data-wall-type="brick">13 Inch Brick Base</option>
+          <option value="18in_brick" data-wall-type="brick">18 Inch Brick Base</option>
+          <option value="8in_block" data-wall-type="block">08 Inch Block Base</option>
+          <option value="18in_block" data-wall-type="block">18 Inch Block Base</option>
+          <option value="27in_block" data-wall-type="block">27 Inch Block Base</option>
+        </select>
+      </div>
+
+      <!-- Depth input group -->
+      <div class="form-group">
+        <div class="unit-row">
+          <input type="number" id="baseDepth" placeholder="Depth" min="0" />
+          <select id="depthUnit">
+            <option value="m">Meter</option>
+            <option value="ft">Foot</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action buttons in grid layout -->
+      <div class="action-buttons">
+        <button id="addRoof" class="full-width">Add Roof</button>
+        <button id="beamColumn" class="full-width">Beam & Column</button>
+        <button id="brickWall">Brick Wall</button>
+        <button id="blockWall">Block Wall</button>
+        <button id="addDoor">Add Door</button>
+        <button id="addWindow">Add Window</button>
+        <button id="updateWalls" class="full-width">Update Walls</button>
+        <button id="estimateMaterials" class="full-width">Estimate Materials</button>
+        <button id="addFloor" class="full-width">Add Floor</button>
       </div>
     </div>
 

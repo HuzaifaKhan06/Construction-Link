@@ -106,13 +106,165 @@ const windowUnitSelect = document.getElementById('windowUnitSelect');
 const windowPositionSelect = document.getElementById('windowPositionSelect');
 const submitWindowBtn = document.getElementById('submitWindowBtn');
 
-function showCustomAlert(message) {
-  alertMessage.textContent = message;
-  customAlert.style.display = 'block';
+// Toast Notification System
+function showToast(message, type = 'info', duration = 4000) {
+  // If the global showNotification function exists, use it
+  if (window.showNotification) {
+    window.showNotification(message, type, duration);
+    return;
+  }
+  
+  // Otherwise, create our own toast
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    document.body.appendChild(toastContainer);
+    
+    // Add styles for toast notifications if not already added
+    if (!document.getElementById('toast-styles')) {
+      const style = document.createElement('style');
+      style.id = 'toast-styles';
+      style.textContent = `
+        #toast-container {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+        .toast {
+          min-width: 250px;
+          margin-bottom: 10px;
+          padding: 15px 20px;
+          border-radius: 4px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          animation: toast-in 0.3s ease-out forwards;
+          opacity: 0;
+          transform: translateX(50px);
+          display: flex;
+          align-items: center;
+        }
+        .toast-success {
+          background-color: #4CAF50;
+          color: white;
+        }
+        .toast-error {
+          background-color: #F44336;
+          color: white;
+        }
+        .toast-info {
+          background-color: #2196F3;
+          color: white;
+        }
+        .toast-warning {
+          background-color: #FF9800;
+          color: white;
+        }
+        .toast-icon {
+          margin-right: 12px;
+          font-size: 20px;
+        }
+        .toast-content {
+          flex-grow: 1;
+        }
+        .toast-close {
+          background: transparent;
+          border: none;
+          color: white;
+          font-size: 16px;
+          cursor: pointer;
+          opacity: 0.8;
+          margin-left: 10px;
+        }
+        .toast-close:hover {
+          opacity: 1;
+        }
+        @keyframes toast-in {
+          from {
+            opacity: 0;
+            transform: translateX(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes toast-out {
+          from {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateX(50px);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let icon = '';
+  switch (type) {
+    case 'success': icon = '✓'; break;
+    case 'error': icon = '✕'; break;
+    case 'warning': icon = '⚠'; break;
+    case 'info': icon = 'ℹ'; break;
+  }
+  
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-content">${message}</div>
+    <button class="toast-close">&times;</button>
+  `;
+  
+  toastContainer.appendChild(toast);
+  
+  // Handle close button click
+  toast.querySelector('.toast-close').addEventListener('click', () => {
+    toast.style.animation = 'toast-out 0.3s forwards';
+    setTimeout(() => {
+      toastContainer.removeChild(toast);
+    }, 300);
+  });
+  
+  // Auto dismiss after duration
+  setTimeout(() => {
+    if (toast.parentNode === toastContainer) {
+      toast.style.animation = 'toast-out 0.3s forwards';
+      setTimeout(() => {
+        if (toast.parentNode === toastContainer) {
+          toastContainer.removeChild(toast);
+        }
+      }, 300);
+    }
+  }, duration);
 }
-closeAlertBtn.addEventListener('click', () => {
-  customAlert.style.display = 'none';
-});
+
+// Replace the original showCustomAlert function
+function showCustomAlert(message) {
+  // Use our toast notification instead
+  showToast(message, 'warning');
+  
+  // For backwards compatibility, also show the original alert if it exists
+  if (customAlert && alertMessage) {
+    alertMessage.textContent = message;
+    customAlert.style.display = 'block';
+  }
+}
+
+// Keep the original close button functionality
+if (closeAlertBtn) {
+  closeAlertBtn.addEventListener('click', () => {
+    customAlert.style.display = 'none';
+  });
+}
 
 function getBaseThicknessInMeters() {
   const val = baseWidthSelect.value;
@@ -230,7 +382,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (currentWallType) {
     const wh = getWallHeightInMeters();
     if (wh <= 0) {
-      showCustomAlert('Wall height must be > 0.');
+      showToast('Wall height must be greater than 0', 'warning');
       return;
     }
     drawing = true;
@@ -257,7 +409,7 @@ canvas.addEventListener('mousedown', (e) => {
       showThreeDotsButton(midX, midY);
       showEndpoints(clickedWall);
     } else {
-      showCustomAlert('Please select Brick Wall or Block Wall first.');
+      showToast('Please select Brick Wall or Block Wall first', 'info');
     }
   }
 });
@@ -348,6 +500,8 @@ canvas.addEventListener('mouseup', () => {
     add3DWall(newWall);
     redraw();
     pushState();
+    
+    // Removed toast notification for wall addition
   } else if (isDragging) {
     pushState();
   }
@@ -510,6 +664,8 @@ deleteButton.addEventListener('click', () => {
     endpoint2.style.display = 'none';
     threeDotsButton.style.display = 'none';
     pushState();
+    
+    // Removed toast for wall deletion
   }
   deleteButton.style.display = 'none';
 });
@@ -535,7 +691,7 @@ setLengthBtn.addEventListener('click', () => {
   if (!selectedWall) return;
   let newVal = parseFloat(lengthValueInput.value);
   if (isNaN(newVal) || newVal <= 0) {
-    showCustomAlert('Please enter a valid length > 0.');
+    showToast('Please enter a valid length greater than 0', 'error');
     return;
   }
   const oldLength = selectedWall.lengthMeter;
@@ -563,11 +719,16 @@ setLengthBtn.addEventListener('click', () => {
   updateAllWalls();
   pushState();
   lengthForm.style.display = 'none';
+  
+  // Kept this toast as it's useful feedback
+  showToast(`Wall length updated to ${newVal} ${lengthUnitSelect.value}`, 'success');
 });
 
 document.getElementById('updateWalls').addEventListener('click', () => {
   updateAllWalls();
+  showToast('Walls updated successfully', 'success');
 });
+
 document.getElementById('brickWall').addEventListener('click', () => {
   if (currentWallType === 'brick') {
     currentWallType = null;
@@ -579,6 +740,7 @@ document.getElementById('brickWall').addEventListener('click', () => {
   }
   filterWallWidthOptions(currentWallType);
 });
+
 document.getElementById('blockWall').addEventListener('click', () => {
   if (currentWallType === 'block') {
     currentWallType = null;
@@ -614,18 +776,23 @@ function filterWallWidthOptions(wallType) {
 estimateBtn.addEventListener('click', () => {
   handleEstimateMaterials();
 });
+
 function handleEstimateMaterials() {
-// ▶▶ ADDED ▶▶ save full design state (2D + beam/roof/floor) in sessionStorage
-sessionStorage.setItem('designData', JSON.stringify({
-  walls: walls,
-  beamColumnActive: beamColumnActive,
-  roofData: window.roofData || null,
-  floorData: window.floorData || null
-}));
+  // ▶▶ ADDED ▶▶ save full design state (2D + beam/roof/floor) in sessionStorage
+  sessionStorage.setItem('designData', JSON.stringify({
+    walls: walls,
+    beamColumnActive: beamColumnActive,
+    roofData: window.roofData || null,
+    floorData: window.floorData || null
+  }));
 
   const data = calculateMaterialEstimation();
   if (!data) return;
   localStorage.setItem('materialEstimation', JSON.stringify(data));
+  
+  // Show toast before transition
+  showToast('Generating material estimation...', 'info');
+  
   loadingOverlay.style.display = 'flex';
   content.style.filter = 'blur(5px)';
   setTimeout(() => {
@@ -638,7 +805,13 @@ function calculateMaterialEstimation() {
   const wh = getWallHeightInMeters();
   const wt = getWallThicknessInMeters();
   if (wh <= 0 || wt <= 0) {
-    showCustomAlert('Please enter valid wall height & thickness first!');
+    showToast('Please enter valid wall height & thickness first!', 'error');
+    return null;
+  }
+
+  // Check if we have at least 2 walls
+  if (walls.length < 2) {
+    showToast('Please make at least 2 walls for material estimation', 'warning');
     return null;
   }
 
@@ -902,6 +1075,9 @@ beamColumnBtn.addEventListener('click', () => {
   const event = new CustomEvent('add-beam-column', { detail: { walls } });
   window.dispatchEvent(event);
   redraw();
+  
+  // Show confirmation toast for important structural change
+  showToast('Beam & column added to all walls', 'success');
 });
 function add3DWall(wall) {
   const ev = new CustomEvent('add-wall', { detail: wall });
@@ -918,7 +1094,7 @@ function updateAllWalls() {
 
 addDoorBtn.addEventListener('click', () => {
   if (!selectedWall) {
-    showCustomAlert('Please select a wall first.');
+    showToast('Please select a wall first', 'warning');
     return;
   }
   doorModal.style.display = 'block';
@@ -931,7 +1107,7 @@ submitDoorBtn.addEventListener('click', () => {
   const dWidth = parseFloat(doorWidthInput.value);
   const dHeight = parseFloat(doorHeightInput.value);
   if (isNaN(dWidth) || dWidth <= 0 || isNaN(dHeight) || dHeight <= 0) {
-    showCustomAlert('Please enter valid door dimensions.');
+    showToast('Please enter valid door dimensions', 'error');
     return;
   }
   let doorWidthM = dWidth;
@@ -949,11 +1125,14 @@ submitDoorBtn.addEventListener('click', () => {
   updateAllWalls();
   pushState();
   doorModal.style.display = 'none';
+  
+  // Kept this toast for important structural element
+  showToast(`Door added to wall`, 'success');
 });
 
 addWindowBtn.addEventListener('click', () => {
   if (!selectedWall) {
-    showCustomAlert('Please select a wall first.');
+    showToast('Please select a wall first', 'warning');
     return;
   }
   windowModal.style.display = 'block';
@@ -966,7 +1145,7 @@ submitWindowBtn.addEventListener('click', () => {
   const wWidth = parseFloat(windowWidthInput.value);
   const wHeight = parseFloat(windowHeightInput.value);
   if (isNaN(wWidth) || wWidth <= 0 || isNaN(wHeight) || wHeight <= 0) {
-    showCustomAlert('Please enter valid window dimensions.');
+    showToast('Please enter valid window dimensions', 'error');
     return;
   }
   let windowWidthM = wWidth;
@@ -988,6 +1167,9 @@ submitWindowBtn.addEventListener('click', () => {
   updateAllWalls();
   pushState();
   windowModal.style.display = 'none';
+  
+  // Kept this toast for important structural element
+  showToast(`Window added to wall`, 'success');
 });
 
 
@@ -1023,8 +1205,12 @@ function restoreDesign() {
     if (design.floorData && window.createFloor3D) {
       window.createFloor3D(design.floorData.thicknessInches);
     }
+    
+    // Show toast notification when design is restored - important for UX
+    showToast('Design restored from previous session', 'info');
   } catch (err) {
     console.error('▶▶ ADDED ▶▶ failed to restore design:', err);
+    showToast('Failed to restore previous design', 'error');
   }
 }
 document.addEventListener('DOMContentLoaded', restoreDesign);
@@ -1046,6 +1232,9 @@ function loadDesign(data) {
   // 3) Redraw 2D and notify 3D
   redraw();
   updateAllWalls();
+  
+  // Show success notification when design is loaded - important for UX
+  //showToast('Project loaded successfully', 'success');
 }
 
 // ▶▶ NEW ▶▶ Expose it so the loader can call it
@@ -1062,4 +1251,9 @@ window.clear2D = function() {
   undoStack.length = 0;
   pushState();
   redraw();
+  
+  
 };
+
+// Make the toast function globally available
+window.showToast = showToast;
