@@ -413,8 +413,14 @@ function createRoof3D(roofThicknessInches, steelRodDiameter, marginFeet) {
     marginFeet: marginFeet,
     rodHeight: rodHeight,
     rodsCount: shapePoints.length,
-    roofArea: roofArea // newly stored area in m²
+    roofArea: roofArea // calculated area in m²
   };
+  if (document.getElementById('roofWidthInput')) 
+    document.getElementById('roofWidthInput').value = roofThicknessInches;
+  if (document.getElementById('steelRodSelect')) 
+    document.getElementById('steelRodSelect').value = steelRodDiameter;
+  if (document.getElementById('roofMarginInput')) 
+    document.getElementById('roofMarginInput').value = marginFeet;
 }
 
 // --- Floor Modal and Creation Logic ---
@@ -494,10 +500,12 @@ function createFloor3D(floorThicknessInches) {
   const floorArea = computePolygonArea(shapePoints);
 
   // Store floor data globally for estimation
-  window.floorData = {
+    window.floorData = {
     area: floorArea,
     thicknessInches: floorThicknessInches
   };
+  if (document.getElementById('floorThicknessInput')) 
+    document.getElementById('floorThicknessInput').value = floorThicknessInches;
 }
 
 // Helper functions

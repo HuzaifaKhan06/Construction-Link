@@ -966,25 +966,89 @@
   }
 
   // Exposed to your 2D/3D modules:
-  window.getCurrentProjectData = () => ({ 
+ window.getCurrentProjectData = () => {
+  // Get all input values from the UI
+  const wallHeight = document.getElementById('wallHeight').value;
+  const heightUnit = document.getElementById('heightUnit').value;
+  const baseDepth = document.getElementById('baseDepth').value;
+  const depthUnit = document.getElementById('depthUnit').value;
+  const wallWidth = document.getElementById('wallWidth').value;
+  const baseWidth = document.getElementById('baseWidth').value;
+  
+  // Get door modal values if they exist
+  let doorProperties = null;
+  if (document.getElementById('doorWidthInput') && 
+      document.getElementById('doorHeightInput') && 
+      document.getElementById('doorUnitSelect') &&
+      document.getElementById('doorSideSelect')) {
+    doorProperties = {
+      width: document.getElementById('doorWidthInput').value,
+      height: document.getElementById('doorHeightInput').value,
+      unit: document.getElementById('doorUnitSelect').value,
+      side: document.getElementById('doorSideSelect').value
+    };
+  }
+  
+  // Get window modal values
+  let windowProperties = null;
+  if (document.getElementById('windowWidthInput') && 
+      document.getElementById('windowHeightInput') && 
+      document.getElementById('windowUnitSelect') &&
+      document.getElementById('windowPositionSelect')) {
+    windowProperties = {
+      width: document.getElementById('windowWidthInput').value,
+      height: document.getElementById('windowHeightInput').value,
+      unit: document.getElementById('windowUnitSelect').value,
+      position: document.getElementById('windowPositionSelect').value
+    };
+  }
+  
+  // Return the comprehensive project data object
+  return { 
     walls: window.walls || [],
     beamColumnActive: window.beamColumnActive || false,
     roofData: window.roofData || null,
-    floorData: window.floorData || null
-  });
-
-  window.applyProjectData = data => {
-    if (window.loadDesign) window.loadDesign(data);
-    if (data.roofData && window.createRoof3D) {
-      window.createRoof3D(
-        data.roofData.thicknessInches,
-        data.roofData.steelRodDiameter,
-        data.roofData.marginFeet
-      );
-    }
-    if (data.floorData && window.createFloor3D) {
-      window.createFloor3D(data.floorData.thicknessInches);
+    floorData: window.floorData || null,
+    
+    // Add UI state values
+    uiState: {
+      wallHeight,
+      heightUnit,
+      baseDepth,
+      depthUnit,
+      wallWidth,
+      baseWidth,
+      doorProperties,
+      windowProperties
     }
   };
+};
+
+ window.applyProjectData = data => {
+  // First, restore the wall designs
+  if (window.loadDesign) window.loadDesign(data);
+  
+  // Restore roof if it exists
+  if (data.roofData && window.createRoof3D) {
+    window.createRoof3D(
+      data.roofData.thicknessInches,
+      data.roofData.steelRodDiameter,
+      data.roofData.marginFeet
+    );
+  }
+  
+  // Restore floor if it exists
+  if (data.floorData && window.createFloor3D) {
+    window.createFloor3D(data.floorData.thicknessInches);
+  }
+  
+  // Restore UI state values if they exist
+  if (data.uiState) {
+    // Restore inputs using the restoreUIState function from 2d-drawing.js
+    if (window.restoreUIState) {
+      window.restoreUIState(data.uiState);
+    }
+  }
+};
   
 })();

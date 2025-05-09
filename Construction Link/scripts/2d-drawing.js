@@ -1254,6 +1254,62 @@ window.clear2D = function() {
   
   
 };
+function restoreUIState(uiState) {
+  if (!uiState) return;
+  
+  // Restore wall properties
+  if (uiState.wallHeight) wallHeightInput.value = uiState.wallHeight;
+  if (uiState.heightUnit) heightUnitSelect.value = uiState.heightUnit;
+  if (uiState.baseDepth) baseDepthInput.value = uiState.baseDepth;
+  if (uiState.depthUnit) depthUnitSelect.value = uiState.depthUnit;
+  
+  // Restore select elements
+  if (uiState.wallWidth) {
+    // Find the option with the matching value
+    const wallWidthOpt = Array.from(wallWidthSelect.options).find(opt => opt.value === uiState.wallWidth);
+    if (wallWidthOpt) wallWidthSelect.value = uiState.wallWidth;
+  }
+  
+  if (uiState.baseWidth) {
+    const baseWidthOpt = Array.from(baseWidthSelect.options).find(opt => opt.value === uiState.baseWidth);
+    if (baseWidthOpt) baseWidthSelect.value = uiState.baseWidth;
+  }
+  
+  // Door modal values - set them only if not currently being used
+  if (uiState.doorProperties) {
+    if (doorWidthInput) doorWidthInput.value = uiState.doorProperties.width || '';
+    if (doorHeightInput) doorHeightInput.value = uiState.doorProperties.height || '';
+    if (doorUnitSelect) doorUnitSelect.value = uiState.doorProperties.unit || 'm';
+    if (doorSideSelect) doorSideSelect.value = uiState.doorProperties.side || 'center';
+  }
+  
+  // Window modal values
+  if (uiState.windowProperties) {
+    if (windowWidthInput) windowWidthInput.value = uiState.windowProperties.width || '';
+    if (windowHeightInput) windowHeightInput.value = uiState.windowProperties.height || '';
+    if (windowUnitSelect) windowUnitSelect.value = uiState.windowProperties.unit || 'm';
+    if (windowPositionSelect) windowPositionSelect.value = uiState.windowProperties.position || 'center';
+  }
+  
+  // Restore roof modal values if they exist in roofData
+  if (window.roofData) {
+    if (document.getElementById('roofWidthInput')) 
+      document.getElementById('roofWidthInput').value = window.roofData.thicknessInches || '';
+    if (document.getElementById('steelRodSelect')) 
+      document.getElementById('steelRodSelect').value = window.roofData.steelRodDiameter || '16';
+    if (document.getElementById('roofMarginInput')) 
+      document.getElementById('roofMarginInput').value = window.roofData.marginFeet || '';
+  }
+  
+  // Restore floor modal values if they exist in floorData
+  if (window.floorData) {
+    if (document.getElementById('floorThicknessInput')) 
+      document.getElementById('floorThicknessInput').value = window.floorData.thicknessInches || '';
+  }
+}
 
+// Expose the function to window so it can be called from project-management.js
+window.restoreUIState = restoreUIState;
 // Make the toast function globally available
 window.showToast = showToast;
+
