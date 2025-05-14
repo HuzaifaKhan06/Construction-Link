@@ -789,22 +789,50 @@
   // — Helper to build one big canvas from both 2D & 3D —
   function getCombinedCanvas() {
     const canvas2d = document.getElementById('2d-canvas');
-    const canvas3d = document.querySelector('#threejs-canvas canvas');
-    if (!canvas2d || !canvas3d) return null;
+  const canvas3d = document.querySelector('#threejs-canvas canvas');
+  if (!canvas2d || !canvas3d) return null;
 
-    const width  = canvas2d.width;
-    const height = canvas2d.height + canvas3d.height;
-    const out    = document.createElement('canvas');
-    out.width  = width;
-    out.height = height;
-    const ctx = out.getContext('2d');
+  // Create a high-resolution output canvas
+  const width = Math.max(canvas2d.width, canvas3d.width);
+  const height = canvas2d.height + canvas3d.height;
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = height;
+  const ctx = out.getContext('2d');
+  
+  // Add white background
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, width, height);
 
-    // draw 2D plan at the top
-    ctx.drawImage(canvas2d, 0, 0);
-    // then draw 3D view immediately below it
+  // Draw 2D plan at the top
+  ctx.drawImage(canvas2d, 0, 0);
+  
+  // For the 3D canvas, we need to explicitly render to ensure we get the current view
+  try {
+    // Get 3D renderer from window scope
+    const renderer3d = window.getCurrentRenderer && window.getCurrentRenderer();
+    if (renderer3d) {
+      // Temporarily save auto-render state
+      const savedAnimating = window.isRendering3D || false;
+      // Force a render to update the canvas 
+      window.renderOnce && window.renderOnce();
+      // Capture the current state
+      ctx.drawImage(canvas3d, 0, canvas2d.height);
+      // Restore auto-rendering if it was on
+      if (savedAnimating && window.startRendering3D) {
+        window.startRendering3D();
+      }
+    } else {
+      // Fallback if we can't access renderer
+      ctx.drawImage(canvas3d, 0, canvas2d.height);
+    }
+  } catch (err) {
+    console.error('Error when rendering 3D view:', err);
+    // Fallback to simple drawing if rendering fails
     ctx.drawImage(canvas3d, 0, canvas2d.height);
+  }
 
-    return out;
+  return out;
   }
 
   // — Export as JPG —
@@ -823,23 +851,80 @@
 
   // — Export as PDF —
   pdfBtn.onclick = () => {
-    const combined = getCombinedCanvas();
-    if (!combined) {
-      showToast('Could not find both canvases to export.', 'error');
-      return;
-    }
-    const imgData = combined.toDataURL('image/jpeg', 1.0);
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'px',
-      // match page to combined canvas size
-      format: [combined.width, combined.height],
-    });
-    pdf.addImage(imgData, 'JPEG', 0, 0, combined.width, combined.height);
-    pdf.save(`project_${currentProjectId || 'design'}.pdf`);
-    showToast('PDF exported successfully', 'success');
+  const combined = getCombinedCanvas();
+  if (!combined) {
+    showToast('Could not find both canvases to export.', 'error');
+    return;
+  }
+  
+  // Get actual content area sizes
+  const canvas2d = document.getElementById('2d-canvas');
+  const canvas3d = document.querySelector('#threejs-canvas canvas');
+  if (!canvas2d || !canvas3d) return;
+  
+  // Force render of 3D view before creating PDF
+  if (window.renderOnce) window.renderOnce();
+  
+  // Get image data from combined canvas
+  const imgData = combined.toDataURL('image/jpeg', 1.0);
+  
+  const { jsPDF } = window.jspdf;
+  
+  // Calculate proper page size based on content aspect ratio
+  const contentAspectRatio = combined.width / combined.height;
+  
+  // Use A4 or US Letter as base, then adjust orientation
+  let pdfWidth, pdfHeight;
+  
+  // Default to portrait A4 dimensions (in points, not mm)
+  if (contentAspectRatio > 0.7) {
+    // Use landscape if content is wide
+    pdfWidth = 842; // A4 height in points (297mm)
+    pdfHeight = 595; // A4 width in points (210mm)
+  } else {
+    // Use portrait if content is tall
+    pdfWidth = 595; // A4 width in points (210mm)
+    pdfHeight = 842; // A4 height in points (297mm)
+  }
+  
+  // Create PDF with calculated orientation
+  const pdf = new jsPDF({
+    orientation: contentAspectRatio > 0.7 ? 'landscape' : 'portrait',
+    unit: 'pt',
+    format: [pdfWidth, pdfHeight]
+  });
+  
+  // Calculate dimensions to fit content properly in the PDF
+  const margin = 40; // Points margin
+  const usableWidth = pdfWidth - (2 * margin);
+  const usableHeight = pdfHeight - (2 * margin);
+  
+  // Calculate scaling to fit content within usable area
+  const contentRatio = combined.width / combined.height;
+  const pageRatio = usableWidth / usableHeight;
+  
+  let imgWidth, imgHeight;
+  
+  if (contentRatio > pageRatio) {
+    // Content is wider than page ratio - fit to width
+    imgWidth = usableWidth;
+    imgHeight = imgWidth / contentRatio;
+  } else {
+    // Content is taller than page ratio - fit to height
+    imgHeight = usableHeight;
+    imgWidth = imgHeight * contentRatio;
+  }
+  
+  // Center content on page
+  const x = margin + (usableWidth - imgWidth) / 2;
+  const y = margin + (usableHeight - imgHeight) / 2;
+  
+  // Add image to PDF
+  pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+  
+  // Save PDF
+  pdf.save(`project_${currentProjectId || 'design'}.pdf`);
+  showToast('PDF exported successfully', 'success');
   };
 
   window.addEventListener('keydown', e => {
@@ -848,6 +933,14 @@
       saveProject();
     }
   });
+  window.addEventListener('beforeunload', function(e) {
+  // Only show warning if there are unsaved changes
+  if (walls.length > 0 && !currentProjectId) {
+    const message = "You have unsaved changes. Are you sure you want to leave?";
+    e.returnValue = message;
+    return message;
+  }
+});
 
   async function saveProject() {
     // Check if there is an active project
@@ -1025,7 +1118,15 @@
 };
 
  window.applyProjectData = data => {
-  // First, restore the wall designs
+  // First restore UI state if it exists
+  if (data.uiState) {
+    // Restore inputs using the restoreUIState function from 2d-drawing.js
+    if (window.restoreUIState) {
+      window.restoreUIState(data.uiState);
+    }
+  }
+  
+  // Then, restore the wall designs
   if (window.loadDesign) window.loadDesign(data);
   
   // Restore roof if it exists
@@ -1042,13 +1143,38 @@
     window.createFloor3D(data.floorData.thicknessInches);
   }
   
-  // Restore UI state values if they exist
-  if (data.uiState) {
-    // Restore inputs using the restoreUIState function from 2d-drawing.js
-    if (window.restoreUIState) {
-      window.restoreUIState(data.uiState);
-    }
-  }
 };
+
+
+
+
+function detectRefresh() {
+  // Store the timestamp when the page loads
+  const currentPageLoadTime = Date.now();
+  
+  // Get the previous page load time from localStorage
+  const lastPageLoadTime = localStorage.getItem('lastPageLoad');
+  
+  // If there's a previous load time and it was less than 2 seconds ago, it's likely a refresh
+  const isRefresh = lastPageLoadTime && (currentPageLoadTime - lastPageLoadTime < 2000);
+  
+  // Update the last page load time
+  localStorage.setItem('lastPageLoad', currentPageLoadTime);
+  
+  return isRefresh;
+}
+
+// Call this function when the page loads
+const isPageRefresh = detectRefresh();
+
+// If it's a refresh and there's a current project, clear sessionStorage
+if (isPageRefresh && currentProjectId) {
+  sessionStorage.removeItem('designData');
+  // Optionally show a toast notification
+  showToast('Page refreshed. Starting with a clean canvas.', 'info');
+  
+  // If you want to fetch from database instead
+  // loadProjectFromDatabase(currentProjectId);
+}
   
 })();

@@ -155,6 +155,8 @@ function createWall3D(wall) {
   const posX = midX / PIXELS_PER_METER;
   const posZ = -midY / PIXELS_PER_METER;
   const angle = Math.atan2((wall.y2 - wall.y1), (wall.x2 - wall.x1));
+  
+  // Use wall.lengthMeter directly which should be correct regardless of display unit
   const wallLength = wall.lengthMeter;
   const wallThickness = wall.thickness;
   const baseDepth = wall.baseDepth;
@@ -592,7 +594,9 @@ window.addEventListener('add-beam-column', (evt) => {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
-  renderer.render(scene, camera);
+  if (window.isRendering3D !== false) {
+    renderer.render(scene, camera);
+  }
 }
 
 animate();
@@ -628,6 +632,24 @@ window.clear3D = function() {
   window.floorData = null;
   
 };
+window.getCurrentRenderer = function() {
+  return renderer;
+};
 
+window.renderOnce = function() {
+  // Force a single render with current camera/scene
+  renderer.render(scene, camera);
+  return true;
+};
+
+window.isRendering3D = true;
+
+window.startRendering3D = function() {
+  window.isRendering3D = true;
+};
+
+window.stopRendering3D = function() {
+  window.isRendering3D = false;
+};
 // Initialize the toast system
 toastSystem.init();

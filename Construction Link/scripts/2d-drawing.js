@@ -778,7 +778,13 @@ estimateBtn.addEventListener('click', () => {
 });
 
 function handleEstimateMaterials() {
-  // ▶▶ ADDED ▶▶ save full design state (2D + beam/roof/floor) in sessionStorage
+  // Clear any existing 'isRefresh' flag
+  sessionStorage.removeItem('isRefresh');
+  
+  // Set flag to indicate this is navigation, not refresh
+  sessionStorage.setItem('comingFromDesign', 'true');
+  
+  // Save design data
   sessionStorage.setItem('designData', JSON.stringify({
     walls: walls,
     beamColumnActive: beamColumnActive,
@@ -790,7 +796,6 @@ function handleEstimateMaterials() {
   if (!data) return;
   localStorage.setItem('materialEstimation', JSON.stringify(data));
   
-  // Show toast before transition
   showToast('Generating material estimation...', 'info');
   
   loadingOverlay.style.display = 'flex';
@@ -1175,66 +1180,100 @@ submitWindowBtn.addEventListener('click', () => {
 
 // ▶▶ ADDED ▶▶ Restore design from sessionStorage on load
 function restoreDesign() {
+  // Check for navigation flags
+  const comingFromEstimate = sessionStorage.getItem('comingFromEstimate') === 'true';
+  const comingFromDesign = sessionStorage.getItem('comingFromDesign') === 'true';
+  
+  // Clear navigation flags after checking
+  sessionStorage.removeItem('comingFromEstimate');
+  sessionStorage.removeItem('comingFromDesign');
+  
+  // Get saved design data
   const saved = sessionStorage.getItem('designData');
-  if (!saved) return;
-  try {
-    const design = JSON.parse(saved);
-    // 2D state
-    walls = design.walls || [];
-    window.walls = walls;
-    // beam/column
-    beamColumnActive = design.beamColumnActive;
-    window.beamColumnActive = beamColumnActive;
-    // roof & floor
-    window.roofData = design.roofData || null;
-    window.floorData = design.floorData || null;
+  
+  // If this is a refresh (not navigation between pages)
+  if (!comingFromEstimate && !comingFromDesign) {
+    // Clear any existing design data to start fresh
+    sessionStorage.removeItem('designData');
+    return;
+  }
+  
+  // If coming from estimate page, restore the design
+  if (comingFromEstimate && saved) {
+    try {
+      const design = JSON.parse(saved);
+      
+      // Restore wall data
+      walls = design.walls || [];
+      window.walls = walls;
+      
+      // Restore beam/column state
+      beamColumnActive = design.beamColumnActive;
+      window.beamColumnActive = beamColumnActive;
+      
+      // Restore roof & floor data
+      window.roofData = design.roofData || null;
+      window.floorData = design.floorData || null;
 
-    // redraw 2D view
-    redraw();
-    // dispatch to 3D
-    updateAllWalls();
-    // roof
-    if (design.roofData && window.createRoof3D) {
-      window.createRoof3D(
-        design.roofData.thicknessInches,
-        design.roofData.steelRodDiameter,
-        design.roofData.marginFeet
-      );
+      // Redraw the 2D view
+      redraw();
+      
+      // Update the 3D view
+      updateAllWalls();
+      
+      // Restore roof if it exists
+      if (design.roofData && window.createRoof3D) {
+        window.createRoof3D(
+          design.roofData.thicknessInches,
+          design.roofData.steelRodDiameter,
+          design.roofData.marginFeet
+        );
+      }
+      
+      // Restore floor if it exists
+      if (design.floorData && window.createFloor3D) {
+        window.createFloor3D(design.floorData.thicknessInches);
+      }
+      
+      // Show success notification
+      showToast('Design restored from estimate page', 'success');
+    } catch (err) {
+      console.error('Failed to restore design:', err);
+      showToast('Failed to restore design', 'error');
     }
-    // floor
-    if (design.floorData && window.createFloor3D) {
-      window.createFloor3D(design.floorData.thicknessInches);
-    }
-    
-    // Show toast notification when design is restored - important for UX
-    showToast('Design restored from previous session', 'info');
-  } catch (err) {
-    console.error('▶▶ ADDED ▶▶ failed to restore design:', err);
-    showToast('Failed to restore previous design', 'error');
   }
 }
 document.addEventListener('DOMContentLoaded', restoreDesign);
 
 // ▶▶ NEW ▶▶ Load saved design into the local walls array
 function loadDesign(data) {
-  // 1) Replace the local `walls` array contents
+   // 1) Replace the local `walls` array contents
   walls.length = 0;
   if (Array.isArray(data.walls)) {
-    data.walls.forEach(w => walls.push(w));
+    data.walls.forEach(w => {
+      // Make sure unitType and displayLength are properly handled
+      if (w.unitType && w.displayLength) {
+        // Use the saved unitType and displayLength
+        w.unitType = w.unitType;
+        w.displayLength = w.displayLength;
+      } else {
+        // Fallback if they don't exist
+        w.unitType = 'm';
+        w.displayLength = w.lengthMeter;
+      }
+      walls.push(w);
+    });
   }
 
   // 2) Sync flags and extra data
   beamColumnActive = data.beamColumnActive || false;
   window.beamColumnActive = beamColumnActive;
-  window.roofData  = data.roofData  || null;
+  window.roofData = data.roofData || null;
   window.floorData = data.floorData || null;
 
   // 3) Redraw 2D and notify 3D
   redraw();
   updateAllWalls();
-  
-  // Show success notification when design is loaded - important for UX
-  //showToast('Project loaded successfully', 'success');
 }
 
 // ▶▶ NEW ▶▶ Expose it so the loader can call it
